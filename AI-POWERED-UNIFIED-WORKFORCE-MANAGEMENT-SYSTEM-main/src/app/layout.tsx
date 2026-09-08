@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
+import { AuthProvider } from "@/lib/auth/AuthProvider";
+
 export const metadata: Metadata = {
   title: "Pune West Properties",
   description: "Find Your Dream Home in Wakad, Tathawade, Punawale & More",
@@ -14,8 +16,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        {children}
-        
+        <AuthProvider>{children}</AuthProvider>
+
         {/* Chatbase Chatbot Script */}
         <script
           dangerouslySetInnerHTML={{
