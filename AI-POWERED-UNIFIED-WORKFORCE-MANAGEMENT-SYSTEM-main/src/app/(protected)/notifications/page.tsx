@@ -1,5 +1,5 @@
-import { FeaturePlaceholder } from "@/components/layout/FeaturePlaceholder";
+import { NotificationDirectory } from "@/components/notifications/NotificationDirectory";
 
 export default function NotificationsPage() {
-  return <FeaturePlaceholder title="Notifications" description="Your workspace notifications will appear here when notification workflows are introduced." />;
+  return <NotificationDirectory />;
 }
