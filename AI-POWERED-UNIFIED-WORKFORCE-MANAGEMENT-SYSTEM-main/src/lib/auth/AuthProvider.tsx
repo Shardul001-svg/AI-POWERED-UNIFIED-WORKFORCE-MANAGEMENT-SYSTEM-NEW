@@ -38,80 +38,27 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
   const [loading, setLoading] = useState(() => Boolean(supabase));
   const [error, setError] = useState<string | null>(null);
 
-  const refreshProfile = useCallback(async () => {
-    if (!supabase || !user) {
-      setProfile(null);
-      setProfileLoaded(true);
-      return;
-    }
-
-    const { data, error: profileError } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
-
-    if (profileError) {
-      setError("Your account is signed in, but its workforce profile could not be loaded.");
-      setProfile(null);
-      setProfileLoaded(true);
-      return;
-    }
-
-    if (!data || !isProfileRole(data.role)) {
-      setError("Your workforce profile is missing a valid role. Ask an administrator to update it.");
-      setProfile(null);
-      setProfileLoaded(true);
-      return;
-    }
-
-    setProfile(data as Profile);
-    setProfileLoaded(true);
-  }, [supabase, user]);
-
-  useEffect(() => {
-    if (!supabase) {
-      return;
-    }
-
-    let mounted = true;
-
-    const loadSession = async () => {
-      const { data, error: sessionError } = await supabase.auth.getSession();
-
-      if (!mounted) {
+  const resolveProfileForUser = useCallback(
+    async (nextUser: User | null) => {
+      if (!supabase || !nextUser) {
+        console.log("[auth] resolveProfileForUser: no user");
+        setProfile(null);
+        setProfileLoaded(true);
         return;
       }
 
-      if (sessionError) {
-        setError("Your session could not be restored. Please sign in again.");
-      }
+      const { data, error: profileError } = await supabase.from("profiles").select("*").eq("id", nextUser.id).maybeSingle();
 
-      setUser(data.session?.user ?? null);
-      setLoading(false);
-    };
-
-    void loadSession();
-
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    return () => {
-      mounted = false;
-      listener.subscription.unsubscribe();
-    };
-  }, [supabase]);
-
-  useEffect(() => {
-    if (!supabase || !user) {
-      return;
-    }
-
-    let cancelled = false;
-    const loadProfile = async () => {
-      const { data, error: profileError } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
-
-      if (cancelled) {
-        return;
-      }
+      console.log("[auth] profile lookup", {
+        userId: nextUser.id,
+        userEmail: nextUser.email,
+        dataExists: !!data,
+        profileId: data?.id ?? null,
+        profileRole: data?.role ?? null,
+        profileErrorCode: profileError?.code ?? null,
+        profileErrorMessage: profileError?.message ?? null,
+        profileErrorDetails: profileError?.details ?? null,
+      });
 
       if (profileError) {
         setError("Your account is signed in, but its workforce profile could not be loaded.");
@@ -129,13 +76,82 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
 
       setProfile(data as Profile);
       setProfileLoaded(true);
+      setError(null);
+    },
+    [supabase],
+  );
+
+  const refreshProfile = useCallback(async () => {
+    if (!supabase) {
+      setProfile(null);
+      setProfileLoaded(true);
+      return;
+    }
+
+    const { data: authUser, error: authUserError } = await supabase.auth.getUser();
+
+    if (authUserError || !authUser.user) {
+      setUser(null);
+      setProfile(null);
+      setProfileLoaded(true);
+      return;
+    }
+
+    setUser(authUser.user);
+    await resolveProfileForUser(authUser.user);
+  }, [resolveProfileForUser, supabase]);
+
+  useEffect(() => {
+    if (!supabase) {
+      return;
+    }
+
+    let mounted = true;
+
+    const loadSession = async () => {
+      const { data: authUser, error: userError } = await supabase.auth.getUser();
+
+      console.log("[auth] getUser", {
+        userId: authUser.user?.id ?? null,
+        userEmail: authUser.user?.email ?? null,
+        userErrorCode: userError?.code ?? null,
+        userErrorMessage: userError?.message ?? null,
+      });
+
+      if (!mounted) {
+        return;
+      }
+
+      if (userError) {
+        setError("Your session could not be restored. Please sign in again.");
+      }
+
+      const nextUser = authUser.user ?? null;
+      setUser(nextUser);
+      setLoading(false);
+
+      if (nextUser) {
+        void resolveProfileForUser(nextUser);
+      } else {
+        setProfile(null);
+        setProfileLoaded(true);
+      }
     };
 
-    void loadProfile();
+    void loadSession();
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      const nextUser = session?.user ?? null;
+      setUser(nextUser);
+      setLoading(false);
+      void resolveProfileForUser(nextUser);
+    });
+
     return () => {
-      cancelled = true;
+      mounted = false;
+      listener.subscription.unsubscribe();
     };
-  }, [supabase, user]);
+  }, [resolveProfileForUser, supabase]);
 
   const signIn = async (email: string, password: string) => {
     if (!supabase) {

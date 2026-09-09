@@ -3,12 +3,29 @@ import type { CookieMethodsServer } from "@supabase/ssr";
 
 import { getSupabaseConfig } from "./env";
 
-export function createServerSupabaseClient(cookies: CookieMethodsServer) {
+type SupabaseCookieStore = CookieMethodsServer & {
+  set?: (name: string, value: string, options?: Record<string, unknown>) => void;
+};
+
+export function createServerSupabaseClient(cookies: SupabaseCookieStore) {
   const config = getSupabaseConfig();
 
   if (!config) {
     return null;
   }
 
-  return createServerClient(config.url, config.anonKey, { cookies });
+  return createServerClient(config.url, config.anonKey, {
+    cookies: {
+      getAll() {
+        return cookies.getAll();
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value, options }) => {
+          if (typeof cookies.set === "function") {
+            cookies.set(name, value, options);
+          }
+        });
+      },
+    },
+  });
 }

@@ -1,5 +1,5 @@
-import { FeaturePlaceholder } from "@/components/layout/FeaturePlaceholder";
+import { CandidateDirectory } from "@/components/candidates/CandidateDirectory";
 
 export default function CandidatesPage() {
-  return <FeaturePlaceholder title="Candidates" description="Candidate tracking will be added in a later workflow phase." />;
+  return <CandidateDirectory />;
 }

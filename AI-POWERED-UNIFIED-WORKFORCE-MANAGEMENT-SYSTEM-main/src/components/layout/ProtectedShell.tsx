@@ -1,6 +1,7 @@
 "use client";
 
-import { Bell, ChevronDown, LogOut } from "lucide-react";
+import Link from "next/link";
+import { Bell, ChevronDown, LogOut, Settings } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -14,6 +15,8 @@ export function ProtectedShell({ children }: Readonly<{ children: React.ReactNod
   const router = useRouter();
   const { configured, error, loading, profile, profileLoaded, role, signOut, user } = useAuth();
   const [loggingOut, setLoggingOut] = useState(false);
+  const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && configured && !user) {
@@ -56,14 +59,24 @@ export function ProtectedShell({ children }: Readonly<{ children: React.ReactNod
     <main className="protected-app-shell">
       <aside className="protected-sidebar">
         <div className="protected-brand"><span>W</span><strong>workforce<span>OS</span></strong></div>
-        <div className="workspace-switcher"><span className="workspace-dot" /> Northstar HQ <ChevronDown size={14} /></div>
+        <div className="workspace-switcher-wrap">
+          <button type="button" className="workspace-switcher" onClick={() => setWorkspaceMenuOpen((open) => !open)} aria-expanded={workspaceMenuOpen}>
+            <span className="workspace-dot" /> Northstar HQ <ChevronDown size={14} />
+          </button>
+          {workspaceMenuOpen ? (
+            <div className="workspace-menu">
+              <button type="button" onClick={() => setWorkspaceMenuOpen(false)}>Northstar HQ</button>
+              <button type="button" onClick={() => setWorkspaceMenuOpen(false)}>Operations Hub</button>
+            </div>
+          ) : null}
+        </div>
         <nav className="protected-nav" aria-label="Workspace navigation">
-          {navigation.map((item) => <a className={pathname === item.href ? "protected-nav-item active" : "protected-nav-item"} href={item.href} key={`${item.label}-${item.href}`}><NavigationIcon name={item.icon} />{item.label}</a>)}
+          {navigation.map((item) => <Link className={pathname === item.href ? "protected-nav-item active" : "protected-nav-item"} href={item.href} key={`${item.label}-${item.href}`}><NavigationIcon name={item.icon} />{item.label}</Link>)}
         </nav>
         <div className="protected-sidebar-footer"><div className="protected-user"><div className="avatar avatar-small">{initials}</div><div><strong>{profile.full_name || "Workspace user"}</strong><span>{user.email}</span><em>{role}</em></div></div><button className="logout-button" onClick={handleLogout} disabled={loggingOut}><LogOut size={15} />{loggingOut ? "Signing out..." : "Sign out"}</button></div>
       </aside>
       <section className="protected-content-area">
-        <header className="protected-topbar"><div className="protected-breadcrumb"><span>Workspace</span><b>/</b><strong>{navigation.find((item) => item.href === pathname)?.label || "Overview"}</strong></div><div className="protected-top-actions"><button className="protected-notification" aria-label="Notifications" onClick={() => router.push("/notifications")}><Bell size={18} /><i /></button><div className="protected-profile-summary"><div className="avatar">{initials}</div><div><strong>{profile.full_name || "Workspace user"}</strong><span>{role}</span></div></div></div></header>
+        <header className="protected-topbar"><div className="protected-breadcrumb"><span>Workspace</span><b>/</b><strong>{navigation.find((item) => item.href === pathname)?.label || "Overview"}</strong></div><div className="protected-top-actions"><button className="protected-notification" aria-label="Notifications" onClick={() => router.push("/notifications")}><Bell size={18} /><i /></button><button type="button" className="protected-profile-summary" onClick={() => setProfileMenuOpen((open) => !open)}><div className="avatar">{initials}</div><div><strong>{profile.full_name || "Workspace user"}</strong><span>{role}</span></div></button>{profileMenuOpen ? <div className="profile-menu profile-menu-top"><Link href="/settings" onClick={() => setProfileMenuOpen(false)}><Settings size={14} /> Settings</Link><button type="button" onClick={() => { setProfileMenuOpen(false); void handleLogout(); }}><LogOut size={14} /> Logout</button></div> : null}</div></header>
         {children}
       </section>
     </main>

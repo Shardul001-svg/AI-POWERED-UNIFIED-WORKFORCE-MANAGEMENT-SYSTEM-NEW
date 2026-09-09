@@ -1,5 +1,5 @@
-import { FeaturePlaceholder } from "@/components/layout/FeaturePlaceholder";
+import { RequestDirectory } from "@/components/requests/RequestDirectory";
 
 export default function RequestsPage() {
-  return <FeaturePlaceholder title="Requests" description="Employee and HR request workflows will be added after the authentication foundation." />;
+  return <RequestDirectory />;
 }

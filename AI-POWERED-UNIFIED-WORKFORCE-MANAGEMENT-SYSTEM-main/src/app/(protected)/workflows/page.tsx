@@ -1,5 +1,5 @@
-import { FeaturePlaceholder } from "@/components/layout/FeaturePlaceholder";
+import { WorkflowDirectory } from "@/components/workflows/WorkflowDirectory";
 
 export default function WorkflowsPage() {
-  return <FeaturePlaceholder title="Workflows" description="Workflow coordination is reserved for a later implementation phase." />;
+  return <WorkflowDirectory />;
 }
