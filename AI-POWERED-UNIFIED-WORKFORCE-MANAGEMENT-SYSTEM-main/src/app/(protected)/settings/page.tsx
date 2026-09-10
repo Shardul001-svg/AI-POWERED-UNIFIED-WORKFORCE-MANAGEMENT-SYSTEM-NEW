@@ -1,3 +1,6 @@
+import WorkerChat from "@/components/WorkerChat";
+
+
 import { FeaturePlaceholder } from "@/components/layout/FeaturePlaceholder";
 
 export default function SettingsPage() {
