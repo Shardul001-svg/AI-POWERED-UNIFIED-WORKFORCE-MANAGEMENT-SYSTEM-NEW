@@ -131,3 +131,11 @@ create index if not exists notifications_profile_id_idx on public.notifications(
 create index if not exists notifications_unread_idx on public.notifications(profile_id, is_read);
 create index if not exists activities_profile_id_idx on public.activities(profile_id);
 create index if not exists activities_created_at_idx on public.activities(created_at desc);
+
+-- Enable Supabase Realtime for notifications
+do $$ begin
+  alter publication supabase_realtime add table public.notifications;
+exception when others then null;
+end $$;
+
+alter table public.notifications replica identity full;

@@ -1,5 +1,6 @@
 import { requireAuth, requireRole } from "@/lib/api/auth";
 import { createActivity } from "@/lib/api/activity";
+import { createNotificationForProfiles, getProfileIdsByRoles } from "@/lib/api/notifications";
 import { apiError, apiSuccess } from "@/lib/api/response";
 import { parseJsonBody } from "@/lib/api/validation";
 
@@ -82,6 +83,19 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   }
 
   await createActivity(auth.profile.id, "candidate_updated", `Candidate ${id} was updated.`);
+
+  if (body.status !== undefined && existing.status !== body.status) {
+    const adminHrIds = await getProfileIdsByRoles(auth.supabase, ["ADMIN", "HR"]);
+    if (adminHrIds.length > 0) {
+      await createNotificationForProfiles(
+        auth.supabase,
+        adminHrIds,
+        "Candidate status updated",
+        `Candidate ${data.full_name || existing.full_name} status updated to ${body.status}.`,
+        "candidate",
+      );
+    }
+  }
 
   return apiSuccess(data);
 }

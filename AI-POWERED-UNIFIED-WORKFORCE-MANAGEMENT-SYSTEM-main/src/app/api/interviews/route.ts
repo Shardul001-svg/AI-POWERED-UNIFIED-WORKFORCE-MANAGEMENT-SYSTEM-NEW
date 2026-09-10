@@ -1,5 +1,6 @@
 import { requireAuth } from "@/lib/api/auth";
 import { createActivity } from "@/lib/api/activity";
+import { createNotificationForProfile } from "@/lib/api/notifications";
 import { apiError, apiSuccess } from "@/lib/api/response";
 import { getMissingRequiredFields, parseJsonBody } from "@/lib/api/validation";
 
@@ -58,6 +59,7 @@ export async function POST(request: Request) {
   }
 
   await createActivity(auth.profile.id, "interview_scheduled", `Interview for candidate ${payload.candidate_id} was scheduled.`);
+  await createNotificationForProfile(auth.supabase, auth.profile.id, "Interview scheduled", `Interview scheduled for ${payload.interview_date} at ${payload.interview_time}.`, "interview");
 
   return apiSuccess(data, 201);
 }

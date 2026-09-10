@@ -1,4 +1,5 @@
 import { requireAuth } from "@/lib/api/auth";
+import { createNotificationForProfile } from "@/lib/api/notifications";
 import { apiError, apiSuccess } from "@/lib/api/response";
 import { getMissingRequiredFields, parseJsonBody } from "@/lib/api/validation";
 
@@ -66,6 +67,9 @@ export async function POST(request: Request) {
   if (error) {
     return apiError("Failed to create task record", 500);
   }
+
+  const notificationTarget = payload.assigned_to || auth.profile.id;
+  await createNotificationForProfile(auth.supabase, notificationTarget, "New task assigned", `A new task, “${payload.title}”, was assigned to you.`, "task");
 
   return apiSuccess(data, 201);
 }

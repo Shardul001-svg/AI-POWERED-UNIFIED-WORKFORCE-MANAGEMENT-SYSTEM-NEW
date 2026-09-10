@@ -1,5 +1,5 @@
-import { FeaturePlaceholder } from "@/components/layout/FeaturePlaceholder";
+import { SettingsDirectory } from "@/components/settings/SettingsDirectory";
 
 export default function SettingsPage() {
-  return <FeaturePlaceholder title="Settings" description="Workspace preferences will be added after the core workforce workflows are in place." />;
+  return <SettingsDirectory />;
 }

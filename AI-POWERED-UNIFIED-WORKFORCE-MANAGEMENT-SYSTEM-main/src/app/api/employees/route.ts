@@ -1,5 +1,6 @@
 import { requireAuth, requireRole } from "@/lib/api/auth";
 import { createActivity } from "@/lib/api/activity";
+import { createNotificationForProfile } from "@/lib/api/notifications";
 import { apiError, apiSuccess } from "@/lib/api/response";
 import { getMissingRequiredFields, parseJsonBody } from "@/lib/api/validation";
 
@@ -97,6 +98,7 @@ export async function POST(request: Request) {
   }
 
   await createActivity(auth.profile.id, "employee_created", `Employee ${payload.employee_code} was created.`);
+  await createNotificationForProfile(auth.supabase, auth.profile.id, "Employee profile created", `Employee ${payload.employee_code} was created successfully.`, "employee");
 
   return apiSuccess(data, 201);
 }

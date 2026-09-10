@@ -1,4 +1,5 @@
 import { requireAuth } from "@/lib/api/auth";
+import { createNotificationForProfile } from "@/lib/api/notifications";
 import { apiError, apiSuccess } from "@/lib/api/response";
 import { parseJsonBody } from "@/lib/api/validation";
 
@@ -87,6 +88,27 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
   if (error) {
     return apiError("Failed to update task record", 500);
+  }
+
+  const targetAssignee = data.assigned_to;
+  if (targetAssignee) {
+    if (body.status !== undefined && existing.status !== body.status) {
+      await createNotificationForProfile(
+        auth.supabase,
+        targetAssignee,
+        "Task status updated",
+        `Task “${data.title}” status was updated to ${body.status}.`,
+        "task",
+      );
+    } else if (body.assigned_to !== undefined && existing.assigned_to !== body.assigned_to) {
+      await createNotificationForProfile(
+        auth.supabase,
+        targetAssignee,
+        "Task assigned",
+        `You have been assigned to task “${data.title}”.`,
+        "task",
+      );
+    }
   }
 
   return apiSuccess({
