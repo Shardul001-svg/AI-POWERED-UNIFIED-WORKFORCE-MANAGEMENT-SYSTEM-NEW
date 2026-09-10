@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Bell, LogOut, Search, Settings } from "lucide-react";
 
+import WorkerChat from "@/components/WorkerChat";
 import { useAuth } from "@/lib/auth/AuthProvider";
 
 const shifts = [
@@ -107,6 +108,9 @@ export default function Home() {
             <button type="button" className="metric-card" onClick={() => router.push("/requests")}><span className="metric-label">Time off requests</span><strong>04</strong><span className="metric-change neutral">2 awaiting review</span></button>
           </div>
           <div className="dashboard-grid"><section className="panel schedule-panel"><div className="panel-heading"><div><h2>Today&apos;s schedule</h2><p className="muted">Tuesday, September 8</p></div><button type="button" className="text-link" onClick={() => router.push("/interviews")}>View schedule <span>→</span></button></div><div className="schedule-list">{filteredShifts.length > 0 ? filteredShifts.map((shift) => <div className="shift-row" key={shift.name}><div className="avatar avatar-person">{shift.initials}</div><div className="person-details"><strong>{shift.name}</strong><span>{shift.role}</span></div><span className="shift-time">{shift.time}</span><span className={`status ${shift.status === "On shift" ? "status-on" : "status-soon"}`}><i />{shift.status}</span><button type="button" className="row-menu" aria-label={`More options for ${shift.name}`} onClick={() => router.push("/employees")}>•••</button></div>) : <div className="empty-state">No people match your search.</div>}</div><button type="button" className="panel-footer-link" onClick={() => router.push("/employees")}>Show all 42 people <span>→</span></button></section><section className="panel coverage-panel"><div className="panel-heading"><div><h2>Coverage</h2><p className="muted">Staffing by team</p></div><button type="button" className="more-button" aria-label="Coverage options" onClick={() => router.push("/workflows")}>•••</button></div><div className="coverage-chart"><div className="donut"><div><strong>86%</strong><span>covered</span></div></div><div className="legend"><div><i className="legend-dot dot-teal" /><span>Customer success</span><b>94%</b></div><div><i className="legend-dot dot-coral" /><span>Operations</span><b>88%</b></div><div><i className="legend-dot dot-yellow" /><span>Field services</span><b>76%</b></div></div></div><div className="coverage-note"><span>!</span><p><strong>2 shifts need coverage</strong><br />Review the open shifts before 2:00 PM.</p></div></section></div>
+          <section className="panel ai-agent-panel" aria-label="AI Agent preview">
+            <WorkerChat />
+          </section>
         </div>
       </section>
     </main>
