@@ -1,5 +1,6 @@
 import { requireAuth, requireRole } from "@/lib/api/auth";
 import { createActivity } from "@/lib/api/activity";
+import { createNotificationForProfile } from "@/lib/api/notifications";
 import { apiError, apiSuccess } from "@/lib/api/response";
 import { getMissingRequiredFields, parseJsonBody } from "@/lib/api/validation";
 
@@ -69,6 +70,7 @@ export async function POST(request: Request) {
   }
 
   await createActivity(auth.profile.id, "candidate_created", `Candidate ${payload.full_name} was created.`);
+  await createNotificationForProfile(auth.supabase, auth.profile.id, "Candidate added", `Candidate ${payload.full_name} was added to the pipeline.`, "candidate");
 
   return apiSuccess(data, 201);
 }

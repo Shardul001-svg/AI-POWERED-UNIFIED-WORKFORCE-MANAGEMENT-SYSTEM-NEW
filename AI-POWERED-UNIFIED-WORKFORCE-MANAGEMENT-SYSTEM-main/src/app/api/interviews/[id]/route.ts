@@ -1,4 +1,5 @@
 import { requireAuth } from "@/lib/api/auth";
+import { createNotificationForProfile } from "@/lib/api/notifications";
 import { apiError, apiSuccess } from "@/lib/api/response";
 import { parseJsonBody } from "@/lib/api/validation";
 
@@ -57,6 +58,17 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
   if (error) {
     return apiError("Failed to update interview record", 500);
+  }
+
+  const interviewerId = data.interviewer;
+  if (interviewerId) {
+    await createNotificationForProfile(
+      auth.supabase,
+      interviewerId,
+      "Interview update",
+      `Interview record was updated (Status: ${data.status}, Date: ${data.interview_date} ${data.interview_time}).`,
+      "interview",
+    );
   }
 
   return apiSuccess(data);

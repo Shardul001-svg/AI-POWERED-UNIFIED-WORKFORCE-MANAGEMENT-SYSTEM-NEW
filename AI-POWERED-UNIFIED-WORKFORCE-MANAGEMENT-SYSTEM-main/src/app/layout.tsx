@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 import { AuthProvider } from "@/lib/auth/AuthProvider";
+import { I18nProvider } from "@/lib/i18n/I18nProvider";
+import { ThemeProvider } from "@/lib/theme/ThemeProvider";
 
 export const metadata: Metadata = {
-  title: "Pune West Properties",
-  description: "Find Your Dream Home in Wakad, Tathawade, Punawale & More",
+  title: "workforceOS - AI-Powered Workforce Management System",
+  description: "Enterprise Workforce Management, Scheduling, and Operational Intelligence",
 };
 
 export default function RootLayout({
@@ -16,7 +18,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <ThemeProvider>
+            <I18nProvider>{children}</I18nProvider>
+          </ThemeProvider>
+        </AuthProvider>
 
         {/* Chatbase Chatbot Script */}
         <script

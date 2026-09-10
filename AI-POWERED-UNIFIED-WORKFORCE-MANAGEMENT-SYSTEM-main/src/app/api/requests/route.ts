@@ -1,5 +1,6 @@
 import { requireAuth } from "@/lib/api/auth";
 import { createActivity } from "@/lib/api/activity";
+import { createNotificationForProfile, createNotificationForProfiles, getProfileIdsByRoles } from "@/lib/api/notifications";
 import { apiError, apiSuccess } from "@/lib/api/response";
 import { getMissingRequiredFields, parseJsonBody } from "@/lib/api/validation";
 
@@ -125,6 +126,19 @@ export async function POST(request: Request) {
   }
 
   await createActivity(auth.profile.id, "request_submitted", `Request ${payload.title} was submitted.`);
+  await createNotificationForProfile(auth.supabase, auth.profile.id, "Request submitted", `Your request “${payload.title}” was submitted and is awaiting review.`, "request");
+
+  const adminHrProfileIds = (await getProfileIdsByRoles(auth.supabase, ["ADMIN", "HR"])).filter((id) => id !== auth.profile.id);
+  if (adminHrProfileIds.length > 0) {
+    await createNotificationForProfiles(
+      auth.supabase,
+      adminHrProfileIds,
+      "New request submitted",
+      `${auth.profile.full_name || "An employee"} submitted a new request: “${payload.title}”.`,
+      "request",
+    );
+  }
 
   return apiSuccess(data, 201);
 }
+

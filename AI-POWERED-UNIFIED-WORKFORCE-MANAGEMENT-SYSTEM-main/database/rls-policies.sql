@@ -257,6 +257,16 @@ USING (
   profile_id = auth.uid()
 );
 
+DROP POLICY IF EXISTS "notifications_insert_self_or_admin_hr" ON public.notifications;
+CREATE POLICY "notifications_insert_self_or_admin_hr"
+ON public.notifications
+FOR INSERT
+TO authenticated
+WITH CHECK (
+  profile_id = auth.uid()
+  OR EXISTS (SELECT 1 FROM public.profiles p WHERE p.id = auth.uid() AND p.role IN ('ADMIN', 'HR'))
+);
+
 DROP POLICY IF EXISTS "notifications_update_self" ON public.notifications;
 CREATE POLICY "notifications_update_self"
 ON public.notifications
@@ -266,6 +276,15 @@ USING (
   profile_id = auth.uid()
 )
 WITH CHECK (
+  profile_id = auth.uid()
+);
+
+DROP POLICY IF EXISTS "notifications_delete_self" ON public.notifications;
+CREATE POLICY "notifications_delete_self"
+ON public.notifications
+FOR DELETE
+TO authenticated
+USING (
   profile_id = auth.uid()
 );
 

@@ -1,5 +1,6 @@
 import { requireAuth } from "@/lib/api/auth";
 import { createActivity } from "@/lib/api/activity";
+import { createNotificationForProfile } from "@/lib/api/notifications";
 import { apiError, apiSuccess } from "@/lib/api/response";
 import { parseJsonBody } from "@/lib/api/validation";
 
@@ -99,6 +100,24 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
   if (body.status !== undefined) {
     await createActivity(auth.profile.id, "request_status_updated", `Request ${id} status updated to ${body.status}.`);
+
+    const { data: requestEmployee } = await auth.supabase
+      .from("requests")
+      .select("title, employees!employee_id(profile_id)")
+      .eq("id", id)
+      .maybeSingle();
+
+    const empRecord = requestEmployee?.employees as { profile_id?: string } | Array<{ profile_id?: string }> | null;
+    const empProfileId = Array.isArray(empRecord) ? empRecord[0]?.profile_id : empRecord?.profile_id;
+    if (empProfileId) {
+      await createNotificationForProfile(
+        auth.supabase,
+        empProfileId,
+        "Request status updated",
+        `Your request “${requestEmployee?.title || existing.title}” status was updated to ${body.status}.`,
+        "request",
+      );
+    }
   }
 
   return apiSuccess(data);
