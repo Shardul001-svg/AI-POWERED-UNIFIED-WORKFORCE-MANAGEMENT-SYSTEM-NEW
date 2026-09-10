@@ -29,16 +29,35 @@ export default function WorkerChat() {
         }),
       });
 
+      // Prevent JSON parsing crash if the server responds with an HTTP error or non-JSON body
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Server error response:", response.status, errorText);
+        throw new Error(`Server returned status ${response.status}`);
+      }
+
       const data = await response.json();
-      
+
       if (data.response) {
         setMessages((prev) => [
           ...prev,
           { role: "assistant", content: data.response },
         ]);
+      } else if (data.error) {
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: `Error: ${data.error}` },
+        ]);
       }
     } catch (error) {
-      console.error("Error:", error);
+      console.error("Error sending message:", error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "Sorry, I am having trouble connecting right now. Please check your API key and server logs.",
+        },
+      ]);
     } finally {
       setLoading(false);
     }
@@ -47,9 +66,9 @@ export default function WorkerChat() {
   return (
     <div className="border rounded-lg p-4 max-w-md mx-auto">
       <div className="h-64 overflow-y-auto mb-4 space-y-2">
-        {messages.map((msg, i) => (
+        {messages.map((msg, index) => (
           <div
-            key={i}
+            key={`${msg.role}-${index}`}
             className={`p-2 rounded ${
               msg.role === "user"
                 ? "bg-blue-500 text-white ml-auto max-w-[80%]"
@@ -59,9 +78,7 @@ export default function WorkerChat() {
             {msg.content}
           </div>
         ))}
-        {loading && (
-          <div className="text-gray-500 text-sm">AI is typing...</div>
-        )}
+        {loading && <div className="text-gray-500 text-sm">AI is typing...</div>}
       </div>
 
       <div className="flex gap-2">
@@ -69,7 +86,12 @@ export default function WorkerChat() {
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyPress={(e) => e.key === "Enter" && sendMessage()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              void sendMessage();
+            }
+          }}
           placeholder="Ask about shifts, time-off, etc..."
           className="flex-1 border rounded px-3 py-2"
         />

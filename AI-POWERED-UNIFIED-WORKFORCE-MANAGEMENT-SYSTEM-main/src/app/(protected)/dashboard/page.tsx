@@ -2,7 +2,7 @@
 
 import { ArrowUpRight, CalendarClock, CheckCircle2, Clock3, UsersRound } from "lucide-react";
 import { useRouter } from "next/navigation";
-import WorkerChat from "@/components/workerchat";
+import WorkerChat from "@/components/WorkerChat";
 
 const metrics = [
   { label: "Active today", value: "42", change: "+8.4% vs last week", icon: UsersRound, tone: "teal", href: "/employees" },
