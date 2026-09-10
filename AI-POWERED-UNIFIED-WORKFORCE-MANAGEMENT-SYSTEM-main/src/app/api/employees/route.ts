@@ -75,30 +75,98 @@ export async function POST(request: Request) {
     return apiError("Invalid request payload", 400);
   }
 
-  const missingFields = getMissingRequiredFields(body, ["profile_id", "employee_code", "department", "position", "joining_date"]);
+  const missingFields = getMissingRequiredFields(body, ["employee_code", "department", "position", "joining_date"]);
 
   if (missingFields.length > 0) {
     return apiError(`Missing required fields: ${missingFields.join(", ")}`, 400);
   }
 
+  const employeeCode = String(body.employee_code).trim();
+  const department = String(body.department).trim();
+  const position = String(body.position).trim();
+  const joiningDate = String(body.joining_date).trim();
+  const phone = body.phone ? String(body.phone).trim() : null;
+  const status = body.status && typeof body.status === "string" ? body.status : "ACTIVE";
+  const fullName = body.full_name ? String(body.full_name).trim() : null;
+  const email = body.email ? String(body.email).trim().toLowerCase() : null;
+
+  let targetProfileId: string | null = body.profile_id ? String(body.profile_id).trim() : null;
+
+  if (!targetProfileId) {
+    if (!email) {
+      return apiError("Either profile_id or email is required to associate the employee.", 400);
+    }
+
+    const { data: existingProfile } = await auth.supabase
+      .from("profiles")
+      .select("id")
+      .eq("email", email)
+      .maybeSingle();
+
+    if (existingProfile) {
+      targetProfileId = existingProfile.id;
+    } else {
+      const newProfileId = crypto.randomUUID();
+      const { data: newProfile, error: profileErr } = await auth.supabase
+        .from("profiles")
+        .insert({
+          id: newProfileId,
+          full_name: fullName || employeeCode,
+          email,
+          role: "EMPLOYEE",
+        })
+        .select("id")
+        .single();
+
+      if (profileErr) {
+        console.error("[POST /api/employees] Profile creation error:", profileErr);
+        return apiError(`Failed to create user profile: ${profileErr.message}`, 400);
+      }
+
+      targetProfileId = newProfile.id;
+    }
+  }
+
+  const { data: existingEmp } = await auth.supabase
+    .from("employees")
+    .select("id")
+    .or(`employee_code.eq.${employeeCode},profile_id.eq.${targetProfileId}`)
+    .maybeSingle();
+
+  if (existingEmp) {
+    return apiError(`An employee record with code '${employeeCode}' or this profile already exists.`, 400);
+  }
+
   const payload = {
-    profile_id: body.profile_id,
-    employee_code: String(body.employee_code).trim(),
-    department: String(body.department).trim(),
-    position: String(body.position).trim(),
-    joining_date: String(body.joining_date),
-    phone: body.phone ? String(body.phone).trim() : null,
-    status: body.status && typeof body.status === "string" ? body.status : "ACTIVE",
+    profile_id: targetProfileId,
+    employee_code: employeeCode,
+    department,
+    position,
+    joining_date: joiningDate,
+    phone,
+    status,
   };
 
-  const { data, error } = await auth.supabase.from("employees").insert(payload).select().single();
+  const { data, error } = await auth.supabase
+    .from("employees")
+    .insert(payload)
+    .select("*, profiles!profile_id(full_name, email, role)")
+    .single();
 
   if (error) {
-    return apiError("Failed to create employee record", 500);
+    console.error("[POST /api/employees] Insert error:", error);
+    return apiError(error.message || "Failed to create employee record", 500);
   }
 
   await createActivity(auth.profile.id, "employee_created", `Employee ${payload.employee_code} was created.`);
   await createNotificationForProfile(auth.supabase, auth.profile.id, "Employee profile created", `Employee ${payload.employee_code} was created successfully.`, "employee");
 
-  return apiSuccess(data, 201);
+  const formattedResult = {
+    ...data,
+    full_name: data.profiles?.full_name ?? fullName ?? null,
+    email: data.profiles?.email ?? email ?? null,
+    role: data.profiles?.role ?? "EMPLOYEE",
+  };
+
+  return apiSuccess(formattedResult, 201);
 }

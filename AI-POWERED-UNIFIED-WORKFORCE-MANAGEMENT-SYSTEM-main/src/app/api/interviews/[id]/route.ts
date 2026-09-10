@@ -11,7 +11,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   }
 
   const { id } = await params;
-  const { data, error } = await auth.supabase.from("interviews").select("*").eq("id", id).maybeSingle();
+  const { data, error } = await auth.supabase
+    .from("interviews")
+    .select("*, candidates!candidate_id(full_name, email, position_applied), profiles!interviewer(full_name, email, role)")
+    .eq("id", id)
+    .maybeSingle();
 
   if (error) {
     return apiError("Failed to load interview", 500);
@@ -21,7 +25,14 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     return apiError("Interview not found", 404);
   }
 
-  return apiSuccess(data);
+  return apiSuccess({
+    ...data,
+    candidate_name: data.candidates?.full_name ?? null,
+    candidate_email: data.candidates?.email ?? null,
+    candidate_position: data.candidates?.position_applied ?? null,
+    interviewer_name: data.profiles?.full_name ?? null,
+    interviewer_email: data.profiles?.email ?? null,
+  });
 }
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {

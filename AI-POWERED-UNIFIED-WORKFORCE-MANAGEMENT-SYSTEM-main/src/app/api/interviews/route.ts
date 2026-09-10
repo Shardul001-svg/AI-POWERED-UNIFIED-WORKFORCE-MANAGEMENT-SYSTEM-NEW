@@ -11,13 +11,25 @@ export async function GET() {
     return apiError("Authentication required", 401);
   }
 
-  const { data, error } = await auth.supabase.from("interviews").select("*\n").order("interview_date", { ascending: true });
+  const { data, error } = await auth.supabase
+    .from("interviews")
+    .select("*, candidates!candidate_id(full_name, email, position_applied), profiles!interviewer(full_name, email, role)")
+    .order("interview_date", { ascending: true });
 
   if (error) {
     return apiError("Failed to load interviews", 500);
   }
 
-  return apiSuccess(data ?? []);
+  const hydrated = (data ?? []).map((interview) => ({
+    ...interview,
+    candidate_name: interview.candidates?.full_name ?? null,
+    candidate_email: interview.candidates?.email ?? null,
+    candidate_position: interview.candidates?.position_applied ?? null,
+    interviewer_name: interview.profiles?.full_name ?? null,
+    interviewer_email: interview.profiles?.email ?? null,
+  }));
+
+  return apiSuccess(hydrated);
 }
 
 export async function POST(request: Request) {

@@ -54,19 +54,31 @@ export async function POST(request: Request) {
     return apiError(`Missing required fields: ${missingFields.join(", ")}`, 400);
   }
 
+  const fullName = String(body.full_name).trim();
+  const email = String(body.email).trim().toLowerCase();
+  const positionApplied = String(body.position_applied).trim();
+  const experience = Number(body.experience);
+
+  if (!fullName || !email || !positionApplied || Number.isNaN(experience) || experience < 0) {
+    return apiError("Please provide valid candidate details.", 400);
+  }
+
   const payload = {
-    full_name: String(body.full_name).trim(),
-    email: String(body.email).trim(),
+    full_name: fullName,
+    email,
     phone: body.phone ? String(body.phone).trim() : null,
-    position_applied: String(body.position_applied).trim(),
-    experience: Number(body.experience),
+    position_applied: positionApplied,
+    experience,
     status: body.status && typeof body.status === "string" ? body.status : "APPLIED",
   };
 
   const { data, error } = await auth.supabase.from("candidates").insert(payload).select().single();
 
   if (error) {
-    return apiError("Failed to create candidate record", 500);
+    if (error.code === "23505" || error.message?.includes("unique") || error.message?.includes("email")) {
+      return apiError(`A candidate with email '${payload.email}' already exists.`, 400);
+    }
+    return apiError(error.message || "Failed to create candidate record", 500);
   }
 
   await createActivity(auth.profile.id, "candidate_created", `Candidate ${payload.full_name} was created.`);

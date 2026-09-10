@@ -82,20 +82,57 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   if (body.phone !== undefined) updates.phone = body.phone ? String(body.phone).trim() : null;
   if (body.status !== undefined) updates.status = String(body.status);
   if (body.employee_code !== undefined) updates.employee_code = String(body.employee_code).trim();
+  if (body.joining_date !== undefined) updates.joining_date = String(body.joining_date).trim();
 
-  if (Object.keys(updates).length === 0) {
-    return apiError("No update fields provided", 400);
+  // Update associated profile if full_name or email are provided
+  if (body.full_name !== undefined || body.email !== undefined) {
+    const profileUpdates: Record<string, string> = {};
+    if (body.full_name !== undefined) profileUpdates.full_name = String(body.full_name).trim();
+    if (body.email !== undefined) profileUpdates.email = String(body.email).trim().toLowerCase();
+
+    if (Object.keys(profileUpdates).length > 0 && existing.profile_id) {
+      const { error: profErr } = await auth.supabase
+        .from("profiles")
+        .update(profileUpdates)
+        .eq("id", existing.profile_id);
+
+      if (profErr) {
+        return apiError(`Failed to update user profile: ${profErr.message}`, 400);
+      }
+    }
   }
 
-  const { data, error } = await auth.supabase.from("employees").update(updates).eq("id", id).select().single();
+  if (Object.keys(updates).length > 0) {
+    const { error: empErr } = await auth.supabase.from("employees").update(updates).eq("id", id);
 
-  if (error) {
-    return apiError("Failed to update employee record", 500);
+    if (empErr) {
+      if (empErr.code === "23505" || empErr.message?.includes("unique")) {
+        return apiError(`An employee with code '${updates.employee_code || existing.employee_code}' already exists.`, 400);
+      }
+      return apiError(empErr.message || "Failed to update employee record", 500);
+    }
   }
+
+  const { data: updatedEmp, error: fetchUpdatedErr } = await auth.supabase
+    .from("employees")
+    .select("*, profiles!profile_id(full_name, email, role)")
+    .eq("id", id)
+    .single();
+
+  if (fetchUpdatedErr || !updatedEmp) {
+    return apiError("Employee updated, but failed to reload details", 500);
+  }
+
+  const result = {
+    ...updatedEmp,
+    full_name: updatedEmp.profiles?.full_name ?? null,
+    email: updatedEmp.profiles?.email ?? null,
+    role: updatedEmp.profiles?.role ?? null,
+  };
 
   await createActivity(auth.profile.id, "employee_updated", `Employee ${id} was updated.`);
 
-  return apiSuccess(data);
+  return apiSuccess(result);
 }
 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {

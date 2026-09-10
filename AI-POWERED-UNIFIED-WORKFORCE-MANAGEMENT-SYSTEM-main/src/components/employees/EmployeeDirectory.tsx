@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { ArrowUpRight, Building2, Loader2, Pencil, Plus, Search, Trash2, UserRound } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Building2, Eye, Loader2, MoreHorizontal, Pencil, Plus, Search, Trash2, UserRound } from "lucide-react";
 
+import { AddEmployeeModal } from "@/components/dashboard/AddEmployeeModal";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { EditEmployeeModal, EmployeeEditRow } from "./EditEmployeeModal";
+import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 
 type EmployeeProfileSummary = {
   full_name?: string | null;
@@ -28,26 +30,6 @@ type EmployeeRow = {
   role?: string | null;
 };
 
-type EmployeeFormState = {
-  profile_id: string;
-  employee_code: string;
-  department: string;
-  position: string;
-  joining_date: string;
-  phone: string;
-  status: "ACTIVE" | "INACTIVE";
-};
-
-const emptyForm: EmployeeFormState = {
-  profile_id: "",
-  employee_code: "",
-  department: "",
-  position: "",
-  joining_date: "",
-  phone: "",
-  status: "ACTIVE",
-};
-
 function normalizeEmployee(row: Partial<EmployeeRow>): EmployeeRow {
   const profile = row.profiles ?? {};
 
@@ -69,23 +51,44 @@ function normalizeEmployee(row: Partial<EmployeeRow>): EmployeeRow {
 }
 
 export function EmployeeDirectory() {
-  const router = useRouter();
   const { role } = useAuth();
   const canManageEmployees = role === "ADMIN" || role === "HR";
 
+  const directoryRef = useRef<HTMLDivElement>(null);
   const [employees, setEmployees] = useState<EmployeeRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<EmployeeRow | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
-  const [formState, setFormState] = useState<EmployeeFormState>(emptyForm);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
+
+  // Modals and action menus
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [editingEmployee, setEditingEmployee] = useState<EmployeeRow | null>(null);
+  const [deletingEmployee, setDeletingEmployee] = useState<EmployeeRow | null>(null);
+
+  // Dismiss action menu on outside click or Escape
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (directoryRef.current && !directoryRef.current.contains(event.target as Node)) {
+        setActiveMenuId(null);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setActiveMenuId(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
   const fetchEmployees = async () => {
     setLoading(true);
@@ -100,7 +103,24 @@ export function EmployeeDirectory() {
       }
 
       const rows = Array.isArray(payload.data) ? payload.data : [];
-      setEmployees(rows.map((row: Partial<EmployeeRow>) => normalizeEmployee(row)));
+      const normalized = rows.map((row: Partial<EmployeeRow>) => normalizeEmployee(row));
+      setEmployees(normalized);
+
+      // Keep selection or select first employee
+      if (normalized.length > 0) {
+        setSelectedEmployeeId((prev) => {
+          const match = normalized.find((e: EmployeeRow) => e.id === prev);
+          if (match) {
+            setSelectedEmployee(match);
+            return match.id;
+          }
+          setSelectedEmployee(normalized[0]);
+          return normalized[0].id;
+        });
+      } else {
+        setSelectedEmployeeId(null);
+        setSelectedEmployee(null);
+      }
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Unable to load employees.");
       setEmployees([]);
@@ -113,10 +133,7 @@ export function EmployeeDirectory() {
     let active = true;
 
     const loadEmployees = async () => {
-      if (!active) {
-        return;
-      }
-
+      if (!active) return;
       setLoading(true);
       setError(null);
 
@@ -124,27 +141,33 @@ export function EmployeeDirectory() {
         const response = await fetch("/api/employees", { cache: "no-store" });
         const payload = await response.json();
 
-        if (!active) {
-          return;
-        }
+        if (!active) return;
 
         if (!response.ok || !payload.success) {
           throw new Error(payload.message ?? "Unable to load employees.");
         }
 
         const rows = Array.isArray(payload.data) ? payload.data : [];
-        setEmployees(rows.map((row: Partial<EmployeeRow>) => normalizeEmployee(row)));
-      } catch (loadError) {
-        if (!active) {
-          return;
-        }
+        const normalized = rows.map((row: Partial<EmployeeRow>) => normalizeEmployee(row));
+        setEmployees(normalized);
 
+        if (normalized.length > 0) {
+          setSelectedEmployeeId((prev) => {
+            const match = normalized.find((e: EmployeeRow) => e.id === prev);
+            if (match) {
+              setSelectedEmployee(match);
+              return match.id;
+            }
+            setSelectedEmployee(normalized[0]);
+            return normalized[0].id;
+          });
+        }
+      } catch (loadError) {
+        if (!active) return;
         setError(loadError instanceof Error ? loadError.message : "Unable to load employees.");
         setEmployees([]);
       } finally {
-        if (active) {
-          setLoading(false);
-        }
+        if (active) setLoading(false);
       }
     };
 
@@ -178,13 +201,6 @@ export function EmployeeDirectory() {
     });
   }, [employees, search]);
 
-  const openAddModal = () => {
-    setFormState(emptyForm);
-    setFormError(null);
-    setIsEditing(false);
-    setIsModalOpen(true);
-  };
-
   const openEmployeeDetail = async (employeeId: string) => {
     setSelectedEmployeeId(employeeId);
     setDetailError(null);
@@ -212,128 +228,25 @@ export function EmployeeDirectory() {
     setSelectedEmployeeId(null);
     setSelectedEmployee(null);
     setDetailError(null);
-    setIsEditing(false);
   };
 
-  const handleCreateEmployee = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    const missing = [
-      formState.profile_id,
-      formState.employee_code,
-      formState.department,
-      formState.position,
-      formState.joining_date,
-    ].some((value) => !String(value).trim());
-
-    if (missing) {
-      setFormError("Profile ID, employee code, department, position, and joining date are required.");
-      return;
+  const handleEditSuccess = (updated: EmployeeEditRow) => {
+    if (selectedEmployee && selectedEmployee.id === updated.id) {
+      setSelectedEmployee((prev) => (prev ? { ...prev, ...updated } : null));
     }
-
-    setIsSubmitting(true);
-    setFormError(null);
-
-    try {
-      const response = await fetch("/api/employees", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          profile_id: formState.profile_id,
-          employee_code: formState.employee_code,
-          department: formState.department,
-          position: formState.position,
-          joining_date: formState.joining_date,
-          phone: formState.phone || null,
-          status: formState.status,
-        }),
-      });
-
-      const payload = await response.json();
-
-      if (!response.ok || !payload.success) {
-        throw new Error(payload.message ?? "Unable to create employee.");
-      }
-
-      setIsModalOpen(false);
-      setFormState(emptyForm);
-      await fetchEmployees();
-      setSelectedEmployeeId(null);
-      setSelectedEmployee(null);
-    } catch (submitError) {
-      setFormError(submitError instanceof Error ? submitError.message : "Unable to create employee.");
-    } finally {
-      setIsSubmitting(false);
-    }
+    void fetchEmployees();
   };
 
-  const handleUpdateEmployee = async (event: React.FormEvent<HTMLFormElement>) => {
-    if (!selectedEmployee) {
-      return;
-    }
-
-    event.preventDefault();
-
-    setIsSubmitting(true);
-    setDetailError(null);
-
-    try {
-      const response = await fetch(`/api/employees/${selectedEmployee.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          department: selectedEmployee.department,
-          position: selectedEmployee.position,
-          phone: selectedEmployee.phone,
-          status: selectedEmployee.status,
-          employee_code: selectedEmployee.employee_code,
-        }),
-      });
-
-      const payload = await response.json();
-
-      if (!response.ok || !payload.success) {
-        throw new Error(payload.message ?? "Unable to update employee.");
-      }
-
-      setIsEditing(false);
-      await openEmployeeDetail(selectedEmployee.id);
-      await fetchEmployees();
-    } catch (updateError) {
-      setDetailError(updateError instanceof Error ? updateError.message : "Unable to update employee.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleDeleteEmployee = async () => {
-    if (!selectedEmployee || !canManageEmployees) {
-      return;
-    }
-
-    const confirmed = window.confirm(`Delete ${selectedEmployee.full_name || selectedEmployee.employee_code}?`);
-
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/employees/${selectedEmployee.id}`, { method: "DELETE" });
-      const payload = await response.json();
-
-      if (!response.ok || !payload.success) {
-        throw new Error(payload.message ?? "Unable to delete employee.");
-      }
-
+  const handleDeleteSuccess = (deletedId: string) => {
+    if (selectedEmployeeId === deletedId) {
       closeDetail();
-      await fetchEmployees();
-    } catch (deleteError) {
-      setDetailError(deleteError instanceof Error ? deleteError.message : "Unable to delete employee.");
     }
+    void fetchEmployees();
   };
 
   return (
-    <div className="protected-page-content employees-page">
+    <div className="protected-page-content employees-page" ref={directoryRef}>
+      {/* Header */}
       <div className="protected-page-heading">
         <div>
           <p className="eyebrow">Workforce</p>
@@ -341,12 +254,13 @@ export function EmployeeDirectory() {
           <p className="muted">People directory for the current workforce and hiring operations.</p>
         </div>
         {canManageEmployees ? (
-          <button type="button" className="primary-button" onClick={openAddModal}>
+          <button type="button" className="primary-button" onClick={() => setIsAddModalOpen(true)}>
             <Plus size={15} /> Add Employee
           </button>
         ) : null}
       </div>
 
+      {/* Toolbar */}
       <div className="employees-toolbar">
         <div className="employees-count">
           <span>{filteredEmployees.length}</span>
@@ -359,254 +273,264 @@ export function EmployeeDirectory() {
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search employees"
+            placeholder="Search employees by name, email, department, code..."
           />
         </label>
       </div>
 
+      {/* Empty / Error / Loading states */}
       {error ? (
-        <div className="panel panel-warning">
-          <p>{error}</p>
+        <div className="panel empty-state">
+          <UserRound size={24} />
+          <p>{error || "Unable to load employees."}</p>
+          <button type="button" className="secondary-button" onClick={() => void fetchEmployees()}>
+            Retry
+          </button>
         </div>
-      ) : null}
-
-      {loading ? (
-        <div className="panel empty-panel">
-          <Loader2 className="loading-spinner" size={18} />
+      ) : loading ? (
+        <div className="panel empty-state">
+          <Loader2 className="loading-spinner" size={24} />
           <span>Loading employees...</span>
         </div>
+      ) : employees.length === 0 ? (
+        <div className="panel empty-state">
+          <UserRound size={28} />
+          <p style={{ fontWeight: 600, fontSize: 16, color: "var(--ink)" }}>No employees yet</p>
+          <p style={{ margin: "4px 0 16px" }}>There are no employees registered in the workforce yet.</p>
+          {canManageEmployees ? (
+            <button type="button" className="primary-button" onClick={() => setIsAddModalOpen(true)}>
+              <Plus size={15} /> Add Employee
+            </button>
+          ) : null}
+        </div>
       ) : filteredEmployees.length === 0 ? (
-        <div className="panel empty-panel">
-          <UserRound size={18} />
-          <span>No employees match your search.</span>
+        <div className="panel empty-state">
+          <Search size={24} />
+          <p style={{ fontWeight: 600, fontSize: 15, color: "var(--ink)" }}>No employees match your search.</p>
+          <p style={{ margin: "4px 0 16px" }}>No employee record matches &quot;{search}&quot;.</p>
+          <button type="button" className="secondary-button" onClick={() => setSearch("")}>
+            Clear search
+          </button>
         </div>
       ) : (
         <div className="employees-layout">
+          {/* Employee Table List */}
           <div className="panel table-panel">
             <div className="table-header">
-              <span>Name</span>
+              <span>Employee</span>
               <span>Department</span>
               <span>Position</span>
               <span>Status</span>
+              <span style={{ textAlign: "right" }}>Actions</span>
             </div>
             <div className="table-body">
-              {filteredEmployees.map((employee) => (
-                <button
-                  type="button"
-                  className={`employee-row ${selectedEmployeeId === employee.id ? "active" : ""}`}
-                  key={employee.id}
-                  onClick={() => void openEmployeeDetail(employee.id)}
-                >
-                  <span className="employee-name-block">
-                    <strong>{employee.full_name || "Unnamed employee"}</strong>
-                    <small>{employee.email || "No email on file"}</small>
-                  </span>
-                  <span>{employee.department}</span>
-                  <span>{employee.position}</span>
-                  <span>
-                    <span className={`status-pill ${employee.status === "ACTIVE" ? "active" : "inactive"}`}>
-                      {employee.status}
-                    </span>
-                  </span>
-                </button>
-              ))}
+              {filteredEmployees.map((employee) => {
+                const initials = (employee.full_name || employee.email || "E")
+                  .split(" ")
+                  .map((p) => p[0])
+                  .join("")
+                  .slice(0, 2)
+                  .toUpperCase();
+
+                const isSelected = selectedEmployeeId === employee.id;
+
+                return (
+                  <div
+                    tabIndex={0}
+                    role="button"
+                    className={`table-row ${isSelected ? "selected" : ""}`}
+                    key={employee.id}
+                    onClick={() => void openEmployeeDetail(employee.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        void openEmployeeDetail(employee.id);
+                      }
+                    }}
+                  >
+                    <div className="cell-person">
+                      <div className="avatar avatar-person">{initials}</div>
+                      <div>
+                        <strong>{employee.full_name || "Unnamed employee"}</strong>
+                        <span>{employee.email || "No email on file"}</span>
+                      </div>
+                    </div>
+                    <span>{employee.department}</span>
+                    <span>{employee.position}</span>
+                    <div>
+                      <span className={`status-chip ${employee.status === "ACTIVE" ? "active" : "on_leave"}`}>
+                        {employee.status}
+                      </span>
+                    </div>
+                    <div className="cell-actions" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        className="action-menu-trigger"
+                        onClick={() => setActiveMenuId(activeMenuId === employee.id ? null : employee.id)}
+                        aria-label={`Actions for ${employee.full_name || "employee"}`}
+                        aria-expanded={activeMenuId === employee.id}
+                      >
+                        <MoreHorizontal size={18} />
+                      </button>
+
+                      {activeMenuId === employee.id && (
+                        <div className="action-dropdown-menu" role="menu">
+                          <button
+                            type="button"
+                            className="action-dropdown-item"
+                            onClick={() => {
+                              setActiveMenuId(null);
+                              void openEmployeeDetail(employee.id);
+                            }}
+                          >
+                            <Eye size={14} /> View details
+                          </button>
+                          {canManageEmployees && (
+                            <>
+                              <button
+                                type="button"
+                                className="action-dropdown-item"
+                                onClick={() => {
+                                  setActiveMenuId(null);
+                                  setEditingEmployee(employee);
+                                }}
+                              >
+                                <Pencil size={14} /> Edit
+                              </button>
+                              <button
+                                type="button"
+                                className="action-dropdown-item danger"
+                                onClick={() => {
+                                  setActiveMenuId(null);
+                                  setDeletingEmployee(employee);
+                                }}
+                              >
+                                <Trash2 size={14} /> Delete
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
+          {/* Selected Employee Detail Panel */}
           <div className="panel detail-panel">
             {detailLoading ? (
-              <div className="detail-loading">
-                <Loader2 className="loading-spinner" size={18} />
-                <span>Loading employee...</span>
+              <div className="empty-state">
+                <Loader2 className="loading-spinner" size={20} />
+                <span>Loading employee details...</span>
               </div>
             ) : selectedEmployee ? (
               <>
                 <div className="detail-header">
-                  <div>
-                    <p className="eyebrow">Employee profile</p>
-                    <h2>{selectedEmployee.full_name || "Unnamed employee"}</h2>
+                  <div className="detail-person">
+                    <div className="avatar avatar-person" style={{ width: 44, height: 44, fontSize: 14 }}>
+                      {(selectedEmployee.full_name || selectedEmployee.email || "E")
+                        .split(" ")
+                        .map((p) => p[0])
+                        .join("")
+                        .slice(0, 2)
+                        .toUpperCase()}
+                    </div>
+                    <div>
+                      <h2>{selectedEmployee.full_name || "Unnamed employee"}</h2>
+                      <p>{selectedEmployee.email || "No email on file"}</p>
+                    </div>
                   </div>
-                  {canManageEmployees ? (
-                    <div className="detail-actions">
-                      <button type="button" className="secondary-button" onClick={() => setIsEditing((open) => !open)}>
-                        <Pencil size={14} /> {isEditing ? "Close" : "Edit"}
+                </div>
+
+                <div className="detail-body">
+                  {detailError ? <div className="auth-error" style={{ marginBottom: 16 }}>{detailError}</div> : null}
+
+                  <div className="info-grid">
+                    <div className="info-item">
+                      <label>Employee Code</label>
+                      <span>{selectedEmployee.employee_code}</span>
+                    </div>
+                    <div className="info-item">
+                      <label>Status</label>
+                      <span>
+                        <span className={`status-chip ${selectedEmployee.status === "ACTIVE" ? "active" : "on_leave"}`}>
+                          {selectedEmployee.status}
+                        </span>
+                      </span>
+                    </div>
+                    <div className="info-item">
+                      <label>Department</label>
+                      <span>{selectedEmployee.department}</span>
+                    </div>
+                    <div className="info-item">
+                      <label>Position</label>
+                      <span>{selectedEmployee.position}</span>
+                    </div>
+                    <div className="info-item">
+                      <label>Phone Number</label>
+                      <span>{selectedEmployee.phone || "Not provided"}</span>
+                    </div>
+                    <div className="info-item">
+                      <label>Joining Date</label>
+                      <span>{selectedEmployee.joining_date}</span>
+                    </div>
+                  </div>
+
+                  {canManageEmployees && (
+                    <div className="detail-actions" style={{ marginTop: 20, display: "flex", gap: 10 }}>
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        onClick={() => setEditingEmployee(selectedEmployee)}
+                      >
+                        <Pencil size={14} /> Edit
                       </button>
-                      <button type="button" className="danger-button" onClick={handleDeleteEmployee}>
+                      <button
+                        type="button"
+                        className="danger-button"
+                        onClick={() => setDeletingEmployee(selectedEmployee)}
+                      >
                         <Trash2 size={14} /> Delete
                       </button>
                     </div>
-                  ) : null}
+                  )}
                 </div>
-
-                {detailError ? <div className="panel-warning detail-warning"><p>{detailError}</p></div> : null}
-
-                {isEditing ? (
-                  <form className="employee-form" onSubmit={handleUpdateEmployee}>
-                    <div className="field-row">
-                      <label>
-                        Employee code
-                        <input value={selectedEmployee.employee_code} onChange={(event) => setSelectedEmployee({ ...selectedEmployee, employee_code: event.target.value })} />
-                      </label>
-                      <label>
-                        Status
-                        <select value={selectedEmployee.status} onChange={(event) => setSelectedEmployee({ ...selectedEmployee, status: event.target.value as "ACTIVE" | "INACTIVE" })}>
-                          <option value="ACTIVE">ACTIVE</option>
-                          <option value="INACTIVE">INACTIVE</option>
-                        </select>
-                      </label>
-                    </div>
-
-                    <div className="field-row">
-                      <label>
-                        Department
-                        <input value={selectedEmployee.department} onChange={(event) => setSelectedEmployee({ ...selectedEmployee, department: event.target.value })} />
-                      </label>
-                      <label>
-                        Position
-                        <input value={selectedEmployee.position} onChange={(event) => setSelectedEmployee({ ...selectedEmployee, position: event.target.value })} />
-                      </label>
-                    </div>
-
-                    <div className="field-row">
-                      <label>
-                        Joining date
-                        <input type="date" value={selectedEmployee.joining_date ?? ""} onChange={(event) => setSelectedEmployee({ ...selectedEmployee, joining_date: event.target.value })} />
-                      </label>
-                      <label>
-                        Phone
-                        <input value={selectedEmployee.phone ?? ""} onChange={(event) => setSelectedEmployee({ ...selectedEmployee, phone: event.target.value || null })} />
-                      </label>
-                    </div>
-
-                    <div className="detail-footer">
-                      <button type="button" className="secondary-button" onClick={() => setIsEditing(false)}>
-                        Cancel
-                      </button>
-                      <button type="submit" className="primary-button" disabled={isSubmitting}>
-                        {isSubmitting ? "Saving..." : "Save changes"}
-                      </button>
-                    </div>
-                  </form>
-                ) : (
-                  <div className="employee-detail-grid">
-                    <div className="detail-stat">
-                      <span className="detail-label">Email</span>
-                      <strong>{selectedEmployee.email || "No email on file"}</strong>
-                    </div>
-                    <div className="detail-stat">
-                      <span className="detail-label">Employee code</span>
-                      <strong>{selectedEmployee.employee_code}</strong>
-                    </div>
-                    <div className="detail-stat">
-                      <span className="detail-label">Department</span>
-                      <strong>{selectedEmployee.department}</strong>
-                    </div>
-                    <div className="detail-stat">
-                      <span className="detail-label">Role/title</span>
-                      <strong>{selectedEmployee.position}</strong>
-                    </div>
-                    <div className="detail-stat">
-                      <span className="detail-label">Status</span>
-                      <strong>{selectedEmployee.status}</strong>
-                    </div>
-                    <div className="detail-stat">
-                      <span className="detail-label">Joining date</span>
-                      <strong>{selectedEmployee.joining_date}</strong>
-                    </div>
-                    <div className="detail-stat">
-                      <span className="detail-label">Phone</span>
-                      <strong>{selectedEmployee.phone || "Not provided"}</strong>
-                    </div>
-                    <div className="detail-stat">
-                      <span className="detail-label">Profile ID</span>
-                      <strong>{selectedEmployee.profile_id}</strong>
-                    </div>
-                  </div>
-                )}
               </>
             ) : (
-              <div className="detail-empty">
-                <Building2 size={18} />
-                <p>Select an employee to view details.</p>
+              <div className="empty-state">
+                <Building2 size={24} />
+                <p>Select an employee from the directory to view details.</p>
               </div>
             )}
           </div>
         </div>
       )}
 
-      {isModalOpen ? (
-        <div className="modal-backdrop" onClick={() => setIsModalOpen(false)}>
-          <div className="modal-card" onClick={(event) => event.stopPropagation()}>
-            <div className="modal-header">
-              <div>
-                <p className="eyebrow">Create employee</p>
-                <h3>Add employee</h3>
-              </div>
-              <button type="button" className="modal-close" onClick={() => setIsModalOpen(false)} aria-label="Close dialog">
-                ×
-              </button>
-            </div>
+      {/* Add Employee Modal */}
+      <AddEmployeeModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSuccess={() => void fetchEmployees()}
+      />
 
-            <form className="employee-form" onSubmit={handleCreateEmployee}>
-              {formError ? <div className="panel-warning"><p>{formError}</p></div> : null}
+      {/* Edit Employee Modal */}
+      <EditEmployeeModal
+        key={editingEmployee?.id ?? "edit-modal"}
+        isOpen={!!editingEmployee}
+        employee={editingEmployee}
+        onClose={() => setEditingEmployee(null)}
+        onSuccess={handleEditSuccess}
+      />
 
-              <div className="field-row">
-                <label>
-                  Profile ID
-                  <input value={formState.profile_id} onChange={(event) => setFormState({ ...formState, profile_id: event.target.value })} placeholder="Use an existing profile UUID" />
-                </label>
-                <label>
-                  Employee code
-                  <input value={formState.employee_code} onChange={(event) => setFormState({ ...formState, employee_code: event.target.value })} placeholder="EMP-001" />
-                </label>
-              </div>
-
-              <div className="field-row">
-                <label>
-                  Department
-                  <input value={formState.department} onChange={(event) => setFormState({ ...formState, department: event.target.value })} placeholder="Operations" />
-                </label>
-                <label>
-                  Position
-                  <input value={formState.position} onChange={(event) => setFormState({ ...formState, position: event.target.value })} placeholder="Team Lead" />
-                </label>
-              </div>
-
-              <div className="field-row">
-                <label>
-                  Joining date
-                  <input type="date" value={formState.joining_date} onChange={(event) => setFormState({ ...formState, joining_date: event.target.value })} />
-                </label>
-                <label>
-                  Phone
-                  <input value={formState.phone} onChange={(event) => setFormState({ ...formState, phone: event.target.value })} placeholder="+1 555 456 789" />
-                </label>
-              </div>
-
-              <label>
-                Status
-                <select value={formState.status} onChange={(event) => setFormState({ ...formState, status: event.target.value as "ACTIVE" | "INACTIVE" })}>
-                  <option value="ACTIVE">ACTIVE</option>
-                  <option value="INACTIVE">INACTIVE</option>
-                </select>
-              </label>
-
-              <div className="detail-footer modal-footer">
-                <button type="button" className="secondary-button" onClick={() => setIsModalOpen(false)}>
-                  Cancel
-                </button>
-                <button type="submit" className="primary-button" disabled={isSubmitting}>
-                  {isSubmitting ? "Saving..." : "Create employee"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      ) : null}
-
-      <button type="button" className="back-to-dashboard" onClick={() => router.push("/dashboard")}>
-        <ArrowUpRight size={14} /> Back to dashboard
-      </button>
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        key={deletingEmployee?.id ?? "delete-modal"}
+        isOpen={!!deletingEmployee}
+        employee={deletingEmployee}
+        onClose={() => setDeletingEmployee(null)}
+        onSuccess={handleDeleteSuccess}
+      />
     </div>
   );
 }
