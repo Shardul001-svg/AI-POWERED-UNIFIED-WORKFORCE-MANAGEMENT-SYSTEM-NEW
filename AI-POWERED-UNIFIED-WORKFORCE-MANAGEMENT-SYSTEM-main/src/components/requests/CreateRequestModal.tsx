@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { FormEvent, useEffect, useState } from "react";
 import { Loader2, X } from "lucide-react";
@@ -108,50 +108,62 @@ export function CreateRequestModal({ isOpen, onClose, onSuccess }: Readonly<Prop
     } finally { setSubmitting(false); }
   };
 
+  const getLocalizedType = (val: RequestType) => {
+    switch (val) {
+      case "LEAVE": return t.requests.typeLeave;
+      case "HR_QUERY": return t.requests.typeHrQuery;
+      case "DOCUMENT": return t.requests.typeDocument;
+      case "OTHER": return t.requests.typeOther;
+      default: return val;
+    }
+  };
+
   return (
     <div className="modal-overlay" onClick={onClose} role="presentation">
       <div className="modal-container" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
         <div className="modal-header">
-          <h2>+ Create Request</h2>
-          <button type="button" className="icon-button" onClick={onClose} aria-label="Close"><X size={18} /></button>
+          <h2>+ {t.requests.createModalTitle}</h2>
+          <button type="button" className="icon-button" onClick={onClose} aria-label={t.actions.cancel}><X size={18} /></button>
         </div>
         {error && <div className="auth-error" style={{ marginBottom: 16 }}>{error}</div>}
         <form onSubmit={handleSubmit} className="modal-form">
           <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="req-type">Request Type *</label>
+            <div className="form-group" style={{ flex: canManageRequests ? 1 : "1 1 100%" }}>
+              <label htmlFor="req-type">{t.requests.typeLabel} *</label>
               <select id="req-type" value={type} onChange={(e) => setType(e.target.value as RequestType)}>
                 {(Object.keys(TYPE_LABELS) as RequestType[]).map((v) => (
-                  <option key={v} value={v}>{TYPE_LABELS[v]}</option>
+                  <option key={v} value={v}>{getLocalizedType(v)}</option>
                 ))}
               </select>
             </div>
-            <div className="form-group">
-              <label htmlFor="req-status">Status</label>
-              <select id="req-status" value={status} onChange={(e) => setStatus(e.target.value as RequestStatus)}>
-                <option value="PENDING">{t.statuses.pending}</option>
-                <option value="APPROVED">{t.statuses.approved}</option>
-                <option value="REJECTED">{t.statuses.rejected}</option>
-                <option value="COMPLETED">{t.statuses.completed}</option>
-              </select>
-            </div>
+            {canManageRequests && (
+              <div className="form-group">
+                <label htmlFor="req-status">{t.requests.statusLabel}</label>
+                <select id="req-status" value={status} onChange={(e) => setStatus(e.target.value as RequestStatus)}>
+                  <option value="PENDING">{t.statuses.pending}</option>
+                  <option value="APPROVED">{t.statuses.approved}</option>
+                  <option value="REJECTED">{t.statuses.rejected}</option>
+                  <option value="COMPLETED">{t.statuses.completed}</option>
+                </select>
+              </div>
+            )}
           </div>
           <div className="form-group">
-            <label htmlFor="req-title">Title *</label>
+            <label htmlFor="req-title">{t.requests.titleLabel} *</label>
             <input id="req-title" type="text" required placeholder="e.g. Annual leave for December" value={title} onChange={(e) => setTitle(e.target.value)} />
           </div>
           {canManageRequests && (
             <div className="form-group">
-              <label htmlFor="req-employee">Employee *</label>
+              <label htmlFor="req-employee">{t.requests.employeeLabel} *</label>
               {loadingEmployees ? (
                 <div style={{ display: "flex", alignItems: "center", gap: 8, padding: 8, fontSize: 13, color: "var(--muted)" }}>
-                  <Loader2 className="loading-spinner" size={14} /> Loading employees...
+                  <Loader2 className="loading-spinner" size={14} /> {t.actions.loading}
                 </div>
               ) : (
                 <select id="req-employee" value={employeeId} onChange={(e) => setEmployeeId(e.target.value)} disabled={employees.length === 0}>
-                  {employees.length === 0 ? <option value="">No employees available</option> : (
+                  {employees.length === 0 ? <option value="">{t.employees.emptyNoRecords}</option> : (
                     <>
-                      <option value="">Select employee</option>
+                      <option value="">{t.employees.searchPlaceholder}</option>
                       {employees.map((emp) => (
                         <option key={emp.id} value={emp.id}>{emp.full_name} — {emp.department}</option>
                       ))}
@@ -162,13 +174,13 @@ export function CreateRequestModal({ isOpen, onClose, onSuccess }: Readonly<Prop
             </div>
           )}
           <div className="form-group">
-            <label htmlFor="req-desc">Description (Optional)</label>
+            <label htmlFor="req-desc">{t.requests.descriptionLabel}</label>
             <textarea id="req-desc" rows={4} placeholder="Provide additional details about your request..." value={description} onChange={(e) => setDescription(e.target.value)} />
           </div>
           <div className="modal-actions">
             <button type="button" className="secondary-button" onClick={onClose} disabled={submitting}>{t.actions.cancel}</button>
-            <button type="submit" className="primary-button" disabled={submitting}>
-              {submitting ? <><Loader2 className="loading-spinner" size={14} /> Creating...</> : "+ Create Request"}
+            <button type="submit" id="create-request-submit-btn" className="primary-button" disabled={submitting}>
+              {submitting ? <><Loader2 className="loading-spinner" size={14} /> {t.actions.saving}</> : `+ ${t.requests.createRequest}`}
             </button>
           </div>
         </form>

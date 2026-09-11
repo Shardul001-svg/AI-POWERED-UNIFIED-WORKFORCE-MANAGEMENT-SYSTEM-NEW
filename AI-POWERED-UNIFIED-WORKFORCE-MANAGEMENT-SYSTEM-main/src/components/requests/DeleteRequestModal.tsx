@@ -53,17 +53,17 @@ export function DeleteRequestModal({ isOpen, request, onClose, onSuccess }: Read
         <div className="modal-header" style={{ padding: "20px 24px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <div className="danger-icon-badge"><AlertTriangle size={20} /></div>
-            <h2 id="delete-req-title" style={{ fontSize: "20px", margin: 0 }}>Delete request?</h2>
+            <h2 id="delete-req-title" style={{ fontSize: "20px", margin: 0 }}>{t.requests.deleteModalTitle}</h2>
           </div>
-          <button type="button" className="icon-button" onClick={onClose} disabled={deleting} aria-label="Close"><X size={18} /></button>
+          <button type="button" className="icon-button" onClick={onClose} disabled={deleting} aria-label={t.actions.cancel}><X size={18} /></button>
         </div>
 
         {error && <div className="auth-error" style={{ margin: "16px 24px 0" }}>{error}</div>}
 
         <div id="delete-req-desc" style={{ padding: "24px", color: "var(--muted)", fontSize: "15px", lineHeight: 1.5 }}>
-          Are you sure you want to delete the request{" "}
+          {t.requests.deleteConfirmQuestion}{" "}
           <strong style={{ color: "var(--ink)", fontWeight: 600 }}>{'"'}{request.title}{'"'}</strong>{" "}
-          from {displayName}? This action cannot be undone.
+          ({displayName})? {t.requests.deletePermanentWarning}
         </div>
 
         <div className="modal-actions" style={{ padding: "16px 24px 20px", marginTop: 0, borderTop: "1px solid var(--line)" }}>
@@ -71,7 +71,7 @@ export function DeleteRequestModal({ isOpen, request, onClose, onSuccess }: Read
             {t.actions.cancel}
           </button>
           <button type="button" className="danger-button" onClick={handleDelete} disabled={deleting} style={{ height: "44px", padding: "0 20px" }}>
-            {deleting ? <><Loader2 className="loading-spinner" size={16} /> {t.actions.deleting}</> : <><Trash2 size={16} /> {t.actions.delete} request</>}
+            {deleting ? <><Loader2 className="loading-spinner" size={16} /> {t.actions.deleting}</> : <><Trash2 size={16} /> {t.requests.deleteRequest}</>}
           </button>
         </div>
       </div>

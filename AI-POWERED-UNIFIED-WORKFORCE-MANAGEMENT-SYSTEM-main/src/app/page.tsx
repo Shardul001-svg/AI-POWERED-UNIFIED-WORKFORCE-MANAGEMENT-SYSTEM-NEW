@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Bell, LogOut, Search, Settings } from "lucide-react";
 
-import WorkerChat from "@/components/WorkerChat";
+import WorkerChat from "@/components/workerchat";
 import { useAuth } from "@/lib/auth/AuthProvider";
 
 const shifts = [
@@ -26,6 +26,11 @@ export default function Home() {
   const pathname = usePathname();
   const router = useRouter();
   const { profile, signOut, user } = useAuth();
+
+  useEffect(() => {
+    router.replace("/dashboard");
+  }, [router]);
+
   const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);

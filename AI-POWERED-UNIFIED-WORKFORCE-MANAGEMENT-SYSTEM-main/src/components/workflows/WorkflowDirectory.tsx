@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 
 import { useI18n } from "@/lib/i18n/I18nProvider";
-import { CreateTaskModal, TaskStatus, STATUS_LABELS } from "./CreateTaskModal";
+import { CreateTaskModal, TaskStatus } from "./CreateTaskModal";
 import { EditTaskModal, TaskEditRow } from "./EditTaskModal";
 import { DeleteTaskModal } from "./DeleteTaskModal";
 
@@ -26,13 +26,6 @@ type TaskRow = {
   assignee_email?: string | null;
   assignee_role?: string | null;
 };
-
-function formatDate(value: string | null) {
-  if (!value) return "—";
-  const date = new Date(value + (value.includes("T") ? "" : "T00:00:00"));
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(date);
-}
 
 function getDueDateStatus(value: string | null): "overdue" | "today" | "upcoming" | null {
   if (!value) return null;
@@ -60,7 +53,16 @@ function getInitials(name: string | null | undefined) {
 }
 
 export function WorkflowDirectory() {
-  const { t } = useI18n();
+  const { t, formatDate } = useI18n();
+
+  const getTaskStatusLabel = (status: TaskStatus) => {
+    switch (status) {
+      case "TODO": return t.statuses.todo;
+      case "IN_PROGRESS": return t.statuses.inProgress;
+      case "COMPLETED": return t.statuses.completed;
+      default: return status;
+    }
+  };
 
   const directoryRef = useRef<HTMLDivElement>(null);
 
@@ -203,12 +205,12 @@ export function WorkflowDirectory() {
       {/* Header */}
       <div className="protected-page-heading">
         <div>
-          <p className="eyebrow">Operations</p>
-          <h1>{t.pages.workflowsTitle}</h1>
-          <p className="muted">{t.pages.workflowsSubtitle}</p>
+          <p className="eyebrow">{t.workflows.eyebrow}</p>
+          <h1>{t.workflows.title}</h1>
+          <p className="muted">{t.workflows.subtitle}</p>
         </div>
         <button type="button" className="primary-button" onClick={() => setIsCreateModalOpen(true)}>
-          <Plus size={15} /> + Create Task
+          <Plus size={15} /> + {t.workflows.createTask}
         </button>
       </div>
 
@@ -217,7 +219,7 @@ export function WorkflowDirectory() {
         <div className="metric-grid" style={{ gridTemplateColumns: "repeat(4, 1fr)", marginBottom: 20 }}>
           <div className="metric-card">
             <div className="metric-icon blue"><CalendarDays size={16} /></div>
-            <span className="metric-label">Total Tasks</span>
+            <span className="metric-label">{t.workflows.title}</span>
             <strong>{metrics.total}</strong>
           </div>
           <div className="metric-card">
@@ -242,23 +244,23 @@ export function WorkflowDirectory() {
       <div className="employees-toolbar">
         <div className="employees-count">
           <span>{filteredTasks.length}</span>
-          <small>tasks</small>
+          <small>{t.workflows.countLabel}</small>
         </div>
         <div style={{ display: "flex", gap: 10, alignItems: "center", flex: 1, justifyContent: "flex-end", flexWrap: "wrap" }}>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             style={{ background: "var(--input-bg)", border: "1px solid var(--input-border)", borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "var(--ink)", outline: "none" }}
-            aria-label="Filter by status"
+            aria-label={t.workflows.statusLabel}
           >
-            <option value="ALL">All Statuses</option>
-            {(Object.keys(STATUS_LABELS) as TaskStatus[]).map((v) => (
-              <option key={v} value={v}>{STATUS_LABELS[v]}</option>
-            ))}
+            <option value="ALL">{t.workflows.allStatuses}</option>
+            <option value="TODO">{t.statuses.todo}</option>
+            <option value="IN_PROGRESS">{t.statuses.inProgress}</option>
+            <option value="COMPLETED">{t.statuses.completed}</option>
           </select>
-          <label className="employees-search" style={{ maxWidth: 300 }} aria-label="Search tasks">
+          <label className="employees-search" style={{ maxWidth: 300 }} aria-label={t.workflows.searchPlaceholder}>
             <Search size={15} />
-            <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search tasks, assignee..." />
+            <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t.workflows.searchPlaceholder} />
           </label>
         </div>
       </div>
@@ -267,7 +269,7 @@ export function WorkflowDirectory() {
       {error ? (
         <div className="panel empty-state">
           <CalendarDays size={24} />
-          <p style={{ fontWeight: 600, color: "var(--ink)" }}>Unable to load workflows</p>
+          <p style={{ fontWeight: 600, color: "var(--ink)" }}>{t.workflows.loadError}</p>
           <p style={{ margin: "4px 0 16px" }}>{error}</p>
           <button type="button" className="secondary-button" onClick={() => void fetchTasks()}>{t.actions.refresh}</button>
         </div>
@@ -279,29 +281,29 @@ export function WorkflowDirectory() {
       ) : tasks.length === 0 ? (
         <div className="panel empty-state">
           <CalendarDays size={28} />
-          <p style={{ fontWeight: 600, fontSize: 16, color: "var(--ink)" }}>No tasks yet</p>
-          <p style={{ margin: "4px 0 16px" }}>Create a task to start managing workforce work.</p>
+          <p style={{ fontWeight: 600, fontSize: 16, color: "var(--ink)" }}>{t.workflows.emptyNoRecords}</p>
+          <p style={{ margin: "4px 0 16px" }}>{t.workflows.emptyNoRecordsDesc}</p>
           <button type="button" className="primary-button" onClick={() => setIsCreateModalOpen(true)}>
-            <Plus size={15} /> + Create Task
+            <Plus size={15} /> + {t.workflows.createTask}
           </button>
         </div>
       ) : filteredTasks.length === 0 ? (
         <div className="panel empty-state">
           <Search size={24} />
-          <p style={{ fontWeight: 600, fontSize: 15, color: "var(--ink)" }}>No tasks match your filters.</p>
-          <p style={{ margin: "4px 0 16px" }}>Try adjusting your search or status filter.</p>
-          <button type="button" className="secondary-button" onClick={clearFilters}>Clear filters</button>
+          <p style={{ fontWeight: 600, fontSize: 15, color: "var(--ink)" }}>{t.workflows.emptyNoMatch}</p>
+          <p style={{ margin: "4px 0 16px" }}>{t.workflows.emptyNoMatchDesc}</p>
+          <button type="button" className="secondary-button" onClick={clearFilters}>{t.employees.clearSearch}</button>
         </div>
       ) : (
         <div className="employees-layout">
           {/* Task Table */}
           <div className="panel table-panel workflows-table">
             <div className="table-header">
-              <span>Task</span>
-              <span>Assignee</span>
-              <span>Status</span>
-              <span>Due Date</span>
-              <span style={{ textAlign: "right" }}>Actions</span>
+              <span>{t.workflows.colTask}</span>
+              <span>{t.workflows.colAssignedTo}</span>
+              <span>{t.workflows.colStatus}</span>
+              <span>{t.workflows.colDueDate}</span>
+              <span style={{ textAlign: "right" }}>{t.workflows.colActions}</span>
             </div>
             <div className="table-body">
               {filteredTasks.map((task) => {
@@ -324,11 +326,11 @@ export function WorkflowDirectory() {
                       </div>
                     </div>
                     <div>
-                      <strong>{task.assignee_name ?? "Unassigned"}</strong>
+                      <strong>{task.assignee_name ?? t.workflows.unassigned}</strong>
                       {task.assignee_email && <span>{task.assignee_email}</span>}
                     </div>
                     <div>
-                      <span className={`status-chip ${getStatusClass(task.status)}`}>{STATUS_LABELS[task.status]}</span>
+                      <span className={`status-chip ${getStatusClass(task.status)}`}>{getTaskStatusLabel(task.status)}</span>
                     </div>
                     <div>
                       {task.due_date ? (
@@ -392,11 +394,11 @@ export function WorkflowDirectory() {
                   {detailError && <div className="auth-error" style={{ marginBottom: 16 }}>{detailError}</div>}
                   <div className="info-grid">
                     <div className="info-item">
-                      <label>Status</label>
-                      <span><span className={`status-chip ${getStatusClass(selectedTask.status)}`}>{STATUS_LABELS[selectedTask.status]}</span></span>
+                      <label>{t.workflows.statusLabel}</label>
+                      <span><span className={`status-chip ${getStatusClass(selectedTask.status)}`}>{getTaskStatusLabel(selectedTask.status)}</span></span>
                     </div>
                     <div className="info-item">
-                      <label>Due Date</label>
+                      <label>{t.workflows.dueDateLabel}</label>
                       <span>
                         {selectedTask.due_date ? (
                           <span className={`due-date-label ${getDueDateStatus(selectedTask.due_date) ?? ""}`}>{formatDate(selectedTask.due_date)}</span>
@@ -404,32 +406,32 @@ export function WorkflowDirectory() {
                       </span>
                     </div>
                     <div className="info-item">
-                      <label>Assignee</label>
-                      <span>{selectedTask.assignee_name ?? "Unassigned"}</span>
+                      <label>{t.workflows.assignedToLabel}</label>
+                      <span>{selectedTask.assignee_name ?? t.workflows.unassigned}</span>
                     </div>
                     <div className="info-item">
-                      <label>Assignee Email</label>
+                      <label>{t.employees.emailAddress}</label>
                       <span>{selectedTask.assignee_email ?? "—"}</span>
                     </div>
                     <div className="info-item">
-                      <label>Created</label>
+                      <label>{t.requests.colCreated}</label>
                       <span>{formatDate(selectedTask.created_at)}</span>
                     </div>
                     <div className="info-item">
-                      <label>Related Context</label>
+                      <label>{t.requests.typeLabel}</label>
                       <span>{selectedTask.related_type ?? "—"}</span>
                     </div>
                     <div className="info-item" style={{ gridColumn: "1 / -1" }}>
-                      <label>Description</label>
-                      <span>{selectedTask.description || "No description provided."}</span>
+                      <label>{t.workflows.descriptionLabel}</label>
+                      <span>{selectedTask.description || t.interviews.noNotes}</span>
                     </div>
                   </div>
                   <div className="detail-actions" style={{ marginTop: 20, display: "flex", gap: 10 }}>
                     <button type="button" className="secondary-button" onClick={() => setEditingTask(toEditRow(selectedTask))}>
-                      <Pencil size={14} /> {t.actions.edit}
+                      <Pencil size={14} /> {t.workflows.editTask}
                     </button>
                     <button type="button" className="danger-button" onClick={() => setDeletingTask(toEditRow(selectedTask))}>
-                      <Trash2 size={14} /> {t.actions.delete}
+                      <Trash2 size={14} /> {t.workflows.deleteTask}
                     </button>
                   </div>
                 </div>
@@ -437,7 +439,7 @@ export function WorkflowDirectory() {
             ) : (
               <div className="empty-state">
                 <CalendarDays size={24} />
-                <p>Select a task to view its details.</p>
+                <p>{t.workflows.emptyNoRecordsDesc}</p>
               </div>
             )}
           </div>

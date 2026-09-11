@@ -61,8 +61,8 @@ export function CreateRequestModal({ isOpen, onClose, onSuccess }: Readonly<Prop
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-container" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Create Request</h2>
-          <button type="button" className="icon-button" onClick={onClose} aria-label="Close">
+          <h2>{t.requests.createModalTitle}</h2>
+          <button type="button" className="icon-button" onClick={onClose} aria-label={t.actions.cancel}>
             <X size={18} />
           </button>
         </div>
@@ -71,17 +71,17 @@ export function CreateRequestModal({ isOpen, onClose, onSuccess }: Readonly<Prop
 
         <form onSubmit={handleSubmit} className="modal-form">
           <div className="form-group">
-            <label htmlFor="req-type">Request Type *</label>
+            <label htmlFor="req-type">{t.requests.typeLabel} *</label>
             <select id="req-type" value={type} onChange={(e) => setType(e.target.value as typeof type)}>
-              <option value="LEAVE">Annual / Personal Leave</option>
-              <option value="HR_QUERY">HR & Benefits Query</option>
-              <option value="DOCUMENT">Employment Document</option>
-              <option value="OTHER">Equipment & Other Request</option>
+              <option value="LEAVE">{t.requests.typeLeave}</option>
+              <option value="HR_QUERY">{t.requests.typeHrQuery}</option>
+              <option value="DOCUMENT">{t.requests.typeDocument}</option>
+              <option value="OTHER">{t.requests.typeOther}</option>
             </select>
           </div>
 
           <div className="form-group">
-            <label htmlFor="req-title">Request Title *</label>
+            <label htmlFor="req-title">{t.requests.titleLabel} *</label>
             <input
               id="req-title"
               type="text"
@@ -93,7 +93,7 @@ export function CreateRequestModal({ isOpen, onClose, onSuccess }: Readonly<Prop
           </div>
 
           <div className="form-group">
-            <label htmlFor="req-desc">Description / Reason</label>
+            <label htmlFor="req-desc">{t.requests.descriptionLabel}</label>
             <textarea
               id="req-desc"
               rows={3}
@@ -108,7 +108,7 @@ export function CreateRequestModal({ isOpen, onClose, onSuccess }: Readonly<Prop
               {t.actions.cancel}
             </button>
             <button type="submit" className="primary-button" disabled={submitting}>
-              {submitting ? t.actions.submitting : "Submit Request"}
+              {submitting ? t.actions.submitting : t.actions.submit}
             </button>
           </div>
         </form>

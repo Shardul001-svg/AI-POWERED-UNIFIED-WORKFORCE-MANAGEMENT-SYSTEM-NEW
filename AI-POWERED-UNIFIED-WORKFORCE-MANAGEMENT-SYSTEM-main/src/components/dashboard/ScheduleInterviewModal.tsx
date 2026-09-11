@@ -131,8 +131,8 @@ export function ScheduleInterviewModal({ isOpen, onClose, onSuccess, onOpenAddCa
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-container" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Schedule Interview</h2>
-          <button type="button" className="icon-button" onClick={onClose} aria-label="Close">
+          <h2>{t.interviews.scheduleModalTitle}</h2>
+          <button type="button" className="icon-button" onClick={onClose} aria-label={t.actions.cancel}>
             <X size={18} />
           </button>
         </div>
@@ -142,12 +142,12 @@ export function ScheduleInterviewModal({ isOpen, onClose, onSuccess, onOpenAddCa
         {loadingOptions ? (
           <div className="auth-loading" style={{ minHeight: "180px" }}>
             <span className="loading-spinner" />
-            Loading candidates & interviewers...
+            {t.actions.loading}
           </div>
         ) : candidates.length === 0 ? (
           <div className="empty-modal-state">
             <UserPlus size={32} />
-            <p>No candidates are available. Add a candidate first before scheduling an interview.</p>
+            <p>{t.interviews.emptyNoRecordsDesc}</p>
             <button
               type="button"
               className="primary-button"
@@ -156,13 +156,13 @@ export function ScheduleInterviewModal({ isOpen, onClose, onSuccess, onOpenAddCa
                 onOpenAddCandidate();
               }}
             >
-              + Add Candidate First
+              + {t.candidates.addCandidate}
             </button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="modal-form">
             <div className="form-group">
-              <label htmlFor="int-candidate">Candidate *</label>
+              <label htmlFor="int-candidate">{t.interviews.candidateLabel} *</label>
               <select
                 id="int-candidate"
                 required
@@ -178,13 +178,13 @@ export function ScheduleInterviewModal({ isOpen, onClose, onSuccess, onOpenAddCa
             </div>
 
             <div className="form-group">
-              <label htmlFor="int-interviewer">Interviewer</label>
+              <label htmlFor="int-interviewer">{t.interviews.interviewerLabel}</label>
               <select
                 id="int-interviewer"
                 value={selectedInterviewer}
                 onChange={(e) => setSelectedInterviewer(e.target.value)}
               >
-                <option value="">Unassigned</option>
+                <option value="">{t.interviews.selectInterviewer}</option>
                 {interviewers.map((emp) => (
                   <option key={emp.profile_id} value={emp.profile_id}>
                     {emp.full_name} ({emp.department})
@@ -195,7 +195,7 @@ export function ScheduleInterviewModal({ isOpen, onClose, onSuccess, onOpenAddCa
 
             <div className="form-row">
               <div className="form-group">
-                <label htmlFor="int-date">Interview Date *</label>
+                <label htmlFor="int-date">{t.interviews.dateLabel} *</label>
                 <input
                   id="int-date"
                   type="date"
@@ -205,7 +205,7 @@ export function ScheduleInterviewModal({ isOpen, onClose, onSuccess, onOpenAddCa
                 />
               </div>
               <div className="form-group">
-                <label htmlFor="int-time">Interview Time *</label>
+                <label htmlFor="int-time">{t.interviews.timeLabel} *</label>
                 <input
                   id="int-time"
                   type="time"
@@ -217,7 +217,7 @@ export function ScheduleInterviewModal({ isOpen, onClose, onSuccess, onOpenAddCa
             </div>
 
             <div className="form-group">
-              <label htmlFor="int-notes">Notes / Agenda</label>
+              <label htmlFor="int-notes">{t.interviews.notesLabel}</label>
               <textarea
                 id="int-notes"
                 rows={3}
@@ -232,7 +232,7 @@ export function ScheduleInterviewModal({ isOpen, onClose, onSuccess, onOpenAddCa
                 {t.actions.cancel}
               </button>
               <button type="submit" className="primary-button" disabled={submitting}>
-                {submitting ? t.actions.submitting : "Save Interview"}
+                {submitting ? t.actions.submitting : t.actions.save}
               </button>
             </div>
           </form>

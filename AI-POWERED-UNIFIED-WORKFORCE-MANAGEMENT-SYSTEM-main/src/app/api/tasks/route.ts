@@ -10,10 +10,16 @@ export async function GET() {
     return apiError("Authentication required", 401);
   }
 
-  const { data, error } = await auth.supabase
+  let query = auth.supabase
     .from("tasks")
     .select("*, profiles!assigned_to(full_name, email, role)")
     .order("created_at", { ascending: false });
+
+  if (auth.role === "EMPLOYEE") {
+    query = query.eq("assigned_to", auth.profile.id);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     return apiError("Failed to load tasks", 500);
@@ -52,10 +58,12 @@ export async function POST(request: Request) {
     return apiError(`Missing required fields: ${missingFields.join(", ")}`, 400);
   }
 
+  const assignedTo = auth.role === "EMPLOYEE" ? auth.profile.id : (body.assigned_to ? String(body.assigned_to) : null);
+
   const payload = {
     title: String(body.title).trim(),
     description: body.description ? String(body.description).trim() : null,
-    assigned_to: body.assigned_to ? String(body.assigned_to) : null,
+    assigned_to: assignedTo,
     related_type: body.related_type ? String(body.related_type) : null,
     related_id: body.related_id ? String(body.related_id) : null,
     status: body.status && typeof body.status === "string" ? body.status : "TODO",

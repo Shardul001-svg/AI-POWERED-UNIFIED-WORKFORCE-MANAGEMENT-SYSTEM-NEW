@@ -52,7 +52,7 @@ function formatInterviewTime(timeValue: string) {
 }
 
 export function InterviewDirectory() {
-  const { t } = useI18n();
+  const { t, formatDate } = useI18n();
   const { role } = useAuth();
   const canManageInterviews = role === "ADMIN" || role === "HR";
 
@@ -265,13 +265,13 @@ export function InterviewDirectory() {
       {/* Header */}
       <div className="protected-page-heading">
         <div>
-          <p className="eyebrow">Recruitment</p>
-          <h1>{t.pages.interviewsTitle}</h1>
-          <p className="muted">{t.pages.interviewsSubtitle}</p>
+          <p className="eyebrow">{t.interviews.eyebrow}</p>
+          <h1>{t.interviews.title}</h1>
+          <p className="muted">{t.interviews.subtitle}</p>
         </div>
         {canManageInterviews ? (
           <button type="button" className="primary-button" onClick={() => setIsScheduleModalOpen(true)}>
-            <Plus size={15} /> + Schedule Interview
+            <Plus size={15} /> + {t.interviews.scheduleInterview}
           </button>
         ) : null}
       </div>
@@ -280,7 +280,7 @@ export function InterviewDirectory() {
       <div className="employees-toolbar">
         <div className="employees-count">
           <span>{filteredInterviews.length}</span>
-          <small>{t.nav.interviews.toLowerCase()}</small>
+          <small>{t.interviews.countLabel}</small>
         </div>
 
         <div style={{ display: "flex", gap: 12, alignItems: "center", flex: 1, justifyContent: "flex-end" }}>
@@ -298,19 +298,19 @@ export function InterviewDirectory() {
             }}
             aria-label="Filter interviews by status"
           >
-            <option value="ALL">All Statuses</option>
+            <option value="ALL">{t.interviews.allStatuses}</option>
             <option value="SCHEDULED">{t.statuses.scheduled}</option>
             <option value="COMPLETED">{t.statuses.completed}</option>
             <option value="CANCELLED">{t.statuses.cancelled}</option>
           </select>
 
-          <label className="employees-search" style={{ maxWidth: 300 }} aria-label="Search interviews">
+          <label className="employees-search" style={{ maxWidth: 300 }} aria-label={t.interviews.searchPlaceholder}>
             <Search size={15} />
             <input
               type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search candidate or interviewer..."
+              placeholder={t.interviews.searchPlaceholder}
             />
           </label>
         </div>
@@ -320,7 +320,7 @@ export function InterviewDirectory() {
       {error ? (
         <div className="panel empty-state">
           <UserRound size={24} />
-          <p>{error || "Unable to load interviews."}</p>
+          <p>{error || t.interviews.loadError}</p>
           <button type="button" className="secondary-button" onClick={() => void fetchInterviews()}>
             {t.actions.refresh}
           </button>
@@ -333,19 +333,19 @@ export function InterviewDirectory() {
       ) : interviews.length === 0 ? (
         <div className="panel empty-state">
           <CalendarDays size={28} />
-          <p style={{ fontWeight: 600, fontSize: 16, color: "var(--ink)" }}>No interviews scheduled yet</p>
-          <p style={{ margin: "4px 0 16px" }}>Schedule an interview with a candidate and interviewer to get started.</p>
+          <p style={{ fontWeight: 600, fontSize: 16, color: "var(--ink)" }}>{t.interviews.emptyNoRecords}</p>
+          <p style={{ margin: "4px 0 16px" }}>{t.interviews.emptyNoRecordsDesc}</p>
           {canManageInterviews ? (
             <button type="button" className="primary-button" onClick={() => setIsScheduleModalOpen(true)}>
-              <Plus size={15} /> + Schedule Interview
+              <Plus size={15} /> + {t.interviews.scheduleInterview}
             </button>
           ) : null}
         </div>
       ) : filteredInterviews.length === 0 ? (
         <div className="panel empty-state">
           <Search size={24} />
-          <p style={{ fontWeight: 600, fontSize: 15, color: "var(--ink)" }}>No interviews found.</p>
-          <p style={{ margin: "4px 0 16px" }}>No interview record matches the active search or filters.</p>
+          <p style={{ fontWeight: 600, fontSize: 15, color: "var(--ink)" }}>{t.interviews.emptyNoMatch}</p>
+          <p style={{ margin: "4px 0 16px" }}>{t.interviews.emptyNoMatchDesc}</p>
           <button
             type="button"
             className="secondary-button"
@@ -354,7 +354,7 @@ export function InterviewDirectory() {
               setStatusFilter("ALL");
             }}
           >
-            Clear filters
+            {t.employees.clearSearch}
           </button>
         </div>
       ) : (
@@ -362,11 +362,11 @@ export function InterviewDirectory() {
           {/* Interview Table List */}
           <div className="panel table-panel interviews-table">
             <div className="table-header">
-              <span>Candidate</span>
-              <span>Date & Time</span>
-              <span>Interviewer</span>
-              <span>Status</span>
-              <span style={{ textAlign: "right" }}>Actions</span>
+              <span>{t.interviews.colCandidate}</span>
+              <span>{t.interviews.colDate} & {t.interviews.colTime}</span>
+              <span>{t.interviews.colInterviewer}</span>
+              <span>{t.interviews.colStatus}</span>
+              <span style={{ textAlign: "right" }}>{t.interviews.colActions}</span>
             </div>
             <div className="table-body">
               {filteredInterviews.map((interview) => {
@@ -501,23 +501,23 @@ export function InterviewDirectory() {
 
                   <div className="info-grid">
                     <div className="info-item">
-                      <label>Candidate</label>
-                      <span>{selectedInterview.candidate_name || "Unknown candidate"}</span>
+                      <label>{t.interviews.candidateLabel}</label>
+                      <span>{selectedInterview.candidate_name || "—"}</span>
                     </div>
                     <div className="info-item">
-                      <label>Assigned Interviewer</label>
-                      <span>{selectedInterview.interviewer_name || (selectedInterview.interviewer ? "Assigned" : "Unassigned")}</span>
+                      <label>{t.interviews.interviewerLabel}</label>
+                      <span>{selectedInterview.interviewer_name || (selectedInterview.interviewer ? t.statuses.pending : "—")}</span>
                     </div>
                     <div className="info-item">
-                      <label>Interview Date</label>
-                      <span>{formatInterviewDate(selectedInterview.interview_date)}</span>
+                      <label>{t.interviews.dateLabel}</label>
+                      <span>{formatDate(selectedInterview.interview_date)}</span>
                     </div>
                     <div className="info-item">
-                      <label>Interview Time</label>
+                      <label>{t.interviews.timeLabel}</label>
                       <span>{formatInterviewTime(selectedInterview.interview_time)}</span>
                     </div>
                     <div className="info-item">
-                      <label>Status</label>
+                      <label>{t.interviews.statusLabel}</label>
                       <span>
                         <span className={`status-chip ${selectedInterview.status.toLowerCase()}`}>
                           {getStatusLabel(selectedInterview.status)}
@@ -525,12 +525,12 @@ export function InterviewDirectory() {
                       </span>
                     </div>
                     <div className="info-item">
-                      <label>Created Date</label>
-                      <span>{new Date(selectedInterview.created_at).toLocaleDateString()}</span>
+                      <label>{t.employees.joiningDate}</label>
+                      <span>{formatDate(selectedInterview.created_at)}</span>
                     </div>
                     <div className="info-item" style={{ gridColumn: "1 / -1" }}>
-                      <label>Notes / Agenda</label>
-                      <span>{selectedInterview.notes || "No notes recorded."}</span>
+                      <label>{t.interviews.notesLabel}</label>
+                      <span>{selectedInterview.notes || t.interviews.noNotes}</span>
                     </div>
                   </div>
 
@@ -541,14 +541,14 @@ export function InterviewDirectory() {
                         className="secondary-button"
                         onClick={() => setEditingInterview(selectedInterview)}
                       >
-                        <Pencil size={14} /> {t.actions.edit}
+                        <Pencil size={14} /> {t.interviews.editInterview}
                       </button>
                       <button
                         type="button"
                         className="danger-button"
                         onClick={() => setDeletingInterview(selectedInterview)}
                       >
-                        <Trash2 size={14} /> {t.actions.delete}
+                        <Trash2 size={14} /> {t.interviews.deleteInterview}
                       </button>
                     </div>
                   )}
@@ -557,7 +557,7 @@ export function InterviewDirectory() {
             ) : (
               <div className="empty-state">
                 <CalendarDays size={24} />
-                <p>Select an interview from the list to view details.</p>
+                <p>{t.interviews.emptyNoRecordsDesc}</p>
               </div>
             )}
           </div>

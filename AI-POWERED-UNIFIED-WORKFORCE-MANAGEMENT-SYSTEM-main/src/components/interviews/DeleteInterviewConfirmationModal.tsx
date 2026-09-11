@@ -79,7 +79,7 @@ export function DeleteInterviewConfirmationModal({ isOpen, interview, onClose, o
               <AlertTriangle size={20} />
             </div>
             <h2 id="delete-int-dialog-title" style={{ fontSize: "20px", margin: 0 }}>
-              {t.actions.delete} interview?
+              {t.interviews.deleteModalTitle}
             </h2>
           </div>
           <button
@@ -87,7 +87,7 @@ export function DeleteInterviewConfirmationModal({ isOpen, interview, onClose, o
             className="icon-button"
             onClick={onClose}
             disabled={deleting}
-            aria-label="Close"
+            aria-label={t.actions.cancel}
           >
             <X size={18} />
           </button>
@@ -108,8 +108,9 @@ export function DeleteInterviewConfirmationModal({ isOpen, interview, onClose, o
             lineHeight: 1.5,
           }}
         >
-          Are you sure you want to delete the interview for{" "}
-          <strong style={{ color: "var(--ink)", fontWeight: 600 }}>{displayName}</strong>? This action cannot be undone.
+          {t.interviews.deleteConfirmQuestion}{" "}
+          <strong style={{ color: "var(--ink)", fontWeight: 600 }}>{displayName}</strong>?{" "}
+          {t.interviews.deletePermanentWarning}
         </div>
 
         <div className="modal-actions" style={{ padding: "16px 24px 20px", marginTop: 0, borderTop: "1px solid var(--line)" }}>
@@ -135,7 +136,7 @@ export function DeleteInterviewConfirmationModal({ isOpen, interview, onClose, o
               </>
             ) : (
               <>
-                <Trash2 size={16} /> {t.actions.delete} interview
+                <Trash2 size={16} /> {t.interviews.deleteInterview}
               </>
             )}
           </button>

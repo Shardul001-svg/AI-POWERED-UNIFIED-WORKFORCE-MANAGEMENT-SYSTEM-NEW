@@ -65,14 +65,26 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     return apiError("You do not have access to update this employee record", 403);
   }
 
-  if (auth.role === "EMPLOYEE" && existing.profile_id !== auth.profile.id) {
-    return apiError("You can only update your own employee record", 403);
-  }
-
   const body = await parseJsonBody<Record<string, unknown>>(request);
 
   if (!body) {
     return apiError("Invalid request payload", 400);
+  }
+
+  if (auth.role === "EMPLOYEE") {
+    if (existing.profile_id !== auth.profile.id) {
+      return apiError("You can only update your own employee record", 403);
+    }
+    if (
+      body.department !== undefined ||
+      body.position !== undefined ||
+      body.status !== undefined ||
+      body.employee_code !== undefined ||
+      body.joining_date !== undefined ||
+      body.email !== undefined
+    ) {
+      return apiError("Employees cannot modify administrative employee details.", 403);
+    }
   }
 
   const updates: Record<string, string | null> = {};

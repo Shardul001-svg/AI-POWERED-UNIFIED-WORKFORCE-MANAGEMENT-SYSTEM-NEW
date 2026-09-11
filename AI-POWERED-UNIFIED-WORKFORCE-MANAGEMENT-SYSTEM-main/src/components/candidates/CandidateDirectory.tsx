@@ -21,7 +21,7 @@ type CandidateRow = {
 };
 
 export function CandidateDirectory() {
-  const { t } = useI18n();
+  const { t, formatDate } = useI18n();
   const { role } = useAuth();
   const canManageCandidates = role === "ADMIN" || role === "HR";
 
@@ -155,7 +155,12 @@ export function CandidateDirectory() {
     }
 
     return candidates.filter((candidate) => {
-      const haystack = [candidate.full_name, candidate.email, candidate.position_applied, candidate.status]
+      const haystack = [
+        candidate.full_name,
+        candidate.email,
+        candidate.position_applied,
+        candidate.status,
+      ]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
@@ -224,17 +229,17 @@ export function CandidateDirectory() {
   };
 
   return (
-    <div className="protected-page-content candidates-page" ref={directoryRef}>
-      {/* Page Header */}
+    <div className="protected-page-content employees-page" ref={directoryRef}>
+      {/* Header */}
       <div className="protected-page-heading">
         <div>
-          <p className="eyebrow">Recruitment</p>
+          <p className="eyebrow">{t.candidates.eyebrow}</p>
           <h1>{t.pages.candidatesTitle}</h1>
           <p className="muted">{t.pages.candidatesSubtitle}</p>
         </div>
         {canManageCandidates ? (
           <button type="button" className="primary-button" onClick={() => setIsAddModalOpen(true)}>
-            <Plus size={15} /> + {t.actions.add} Candidate
+            <Plus size={15} /> {t.candidates.addCandidate}
           </button>
         ) : null}
       </div>
@@ -243,16 +248,16 @@ export function CandidateDirectory() {
       <div className="employees-toolbar">
         <div className="employees-count">
           <span>{filteredCandidates.length}</span>
-          <small>{t.nav.candidates.toLowerCase()}</small>
+          <small>{t.candidates.countLabel}</small>
         </div>
 
-        <label className="employees-search" aria-label="Search candidates">
+        <label className="employees-search" aria-label={t.candidates.searchPlaceholder}>
           <Search size={15} />
           <input
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search candidates by name, email, role..."
+            placeholder={t.candidates.searchPlaceholder}
           />
         </label>
       </div>
@@ -261,7 +266,7 @@ export function CandidateDirectory() {
       {error ? (
         <div className="panel empty-state">
           <UserRound size={24} />
-          <p>{error || "Unable to load candidates."}</p>
+          <p>{error || t.candidates.loadError}</p>
           <button type="button" className="secondary-button" onClick={() => void fetchCandidates()}>
             {t.actions.refresh}
           </button>
@@ -274,21 +279,21 @@ export function CandidateDirectory() {
       ) : candidates.length === 0 ? (
         <div className="panel empty-state">
           <UserRound size={28} />
-          <p style={{ fontWeight: 600, fontSize: 16, color: "var(--ink)" }}>No candidates yet</p>
-          <p style={{ margin: "4px 0 16px" }}>There are no candidates registered in the recruitment pipeline yet.</p>
+          <p style={{ fontWeight: 600, fontSize: 16, color: "var(--ink)" }}>{t.candidates.emptyNoRecords}</p>
+          <p style={{ margin: "4px 0 16px" }}>{t.candidates.emptyNoRecordsDesc}</p>
           {canManageCandidates ? (
             <button type="button" className="primary-button" onClick={() => setIsAddModalOpen(true)}>
-              <Plus size={15} /> + {t.actions.add} Candidate
+              <Plus size={15} /> {t.candidates.addCandidate}
             </button>
           ) : null}
         </div>
       ) : filteredCandidates.length === 0 ? (
         <div className="panel empty-state">
           <Search size={24} />
-          <p style={{ fontWeight: 600, fontSize: 15, color: "var(--ink)" }}>No candidates match your search.</p>
-          <p style={{ margin: "4px 0 16px" }}>No candidate record matches &quot;{search}&quot;.</p>
+          <p style={{ fontWeight: 600, fontSize: 15, color: "var(--ink)" }}>{t.candidates.emptyNoMatch}</p>
+          <p style={{ margin: "4px 0 16px" }}>{t.candidates.emptyNoMatchDesc}</p>
           <button type="button" className="secondary-button" onClick={() => setSearch("")}>
-            Clear search
+            {t.employees.clearSearch}
           </button>
         </div>
       ) : (
@@ -296,11 +301,11 @@ export function CandidateDirectory() {
           {/* Candidate Table List */}
           <div className="panel table-panel candidates-table">
             <div className="table-header">
-              <span>Candidate</span>
-              <span>Applied Role</span>
-              <span>Experience</span>
-              <span>Status</span>
-              <span style={{ textAlign: "right" }}>{t.nav.settingsAndMore ? "Actions" : "Actions"}</span>
+              <span>{t.candidates.colCandidate}</span>
+              <span>{t.candidates.colAppliedRole}</span>
+              <span>{t.candidates.colExperience}</span>
+              <span>{t.candidates.colStatus}</span>
+              <span style={{ textAlign: "right" }}>{t.candidates.colActions}</span>
             </div>
             <div className="table-body">
               {filteredCandidates.map((candidate) => {
@@ -334,7 +339,7 @@ export function CandidateDirectory() {
                       </div>
                     </div>
                     <span>{candidate.position_applied}</span>
-                    <span>{candidate.experience} yrs</span>
+                    <span>{candidate.experience} {t.candidates.yearsUnit}</span>
                     <div>
                       <span className={`status-chip ${candidate.status.toLowerCase()}`}>
                         {getStatusLabel(candidate.status)}
@@ -345,7 +350,7 @@ export function CandidateDirectory() {
                         type="button"
                         className="action-menu-trigger"
                         onClick={() => setActiveMenuId(activeMenuId === candidate.id ? null : candidate.id)}
-                        aria-label={`Actions for ${candidate.full_name}`}
+                        aria-label={t.candidates.colActions}
                         aria-expanded={activeMenuId === candidate.id}
                       >
                         <MoreHorizontal size={18} />
@@ -427,11 +432,11 @@ export function CandidateDirectory() {
 
                   <div className="info-grid">
                     <div className="info-item">
-                      <label>Position Applied</label>
+                      <label>{t.candidates.positionApplied}</label>
                       <span>{selectedCandidate.position_applied}</span>
                     </div>
                     <div className="info-item">
-                      <label>Status</label>
+                      <label>{t.candidates.colStatus}</label>
                       <span>
                         <span className={`status-chip ${selectedCandidate.status.toLowerCase()}`}>
                           {getStatusLabel(selectedCandidate.status)}
@@ -439,20 +444,20 @@ export function CandidateDirectory() {
                       </span>
                     </div>
                     <div className="info-item">
-                      <label>Experience</label>
-                      <span>{selectedCandidate.experience} years</span>
+                      <label>{t.candidates.colExperience}</label>
+                      <span>{selectedCandidate.experience} {t.candidates.yearsUnit}</span>
                     </div>
                     <div className="info-item">
-                      <label>Phone Number</label>
-                      <span>{selectedCandidate.phone || "Not provided"}</span>
+                      <label>{t.candidates.phone}</label>
+                      <span>{selectedCandidate.phone || "—"}</span>
                     </div>
                     <div className="info-item">
-                      <label>Email Address</label>
+                      <label>{t.candidates.emailAddress}</label>
                       <span>{selectedCandidate.email}</span>
                     </div>
                     <div className="info-item">
-                      <label>Application Date</label>
-                      <span>{new Date(selectedCandidate.created_at).toLocaleDateString()}</span>
+                      <label>{t.candidates.appliedOn}</label>
+                      <span>{formatDate(selectedCandidate.created_at)}</span>
                     </div>
                   </div>
 
@@ -479,7 +484,7 @@ export function CandidateDirectory() {
             ) : (
               <div className="empty-state">
                 <BriefcaseBusiness size={24} />
-                <p>Select a candidate from the directory to view details.</p>
+                <p>{t.actions.noData}</p>
               </div>
             )}
           </div>

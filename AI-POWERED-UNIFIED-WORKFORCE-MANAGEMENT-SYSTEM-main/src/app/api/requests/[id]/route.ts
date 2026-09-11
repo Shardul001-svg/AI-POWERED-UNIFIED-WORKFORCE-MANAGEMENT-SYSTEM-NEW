@@ -81,12 +81,24 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     return apiError("Invalid request payload", 400);
   }
 
+  const isManagement = auth.role === "ADMIN" || auth.role === "HR";
+
+  // Prevent employees from approving, rejecting, or altering request status
+  if (!isManagement && body.status !== undefined && body.status !== existing.status) {
+    return apiError("Only administrators and HR can change request status.", 403);
+  }
+
+  // Prevent employees from editing requests that have already been approved or processed
+  if (!isManagement && existing.status !== "PENDING") {
+    return apiError("Cannot edit a request that has already been processed.", 400);
+  }
+
   const updates: Record<string, string | null> = {};
 
   if (body.type !== undefined) updates.type = String(body.type);
   if (body.title !== undefined) updates.title = String(body.title).trim();
   if (body.description !== undefined) updates.description = body.description ? String(body.description).trim() : null;
-  if (body.status !== undefined) updates.status = String(body.status);
+  if (isManagement && body.status !== undefined) updates.status = String(body.status);
 
   if (Object.keys(updates).length === 0) {
     return apiError("No update fields provided", 400);
@@ -151,8 +163,13 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     return apiError("Failed to validate employee access", 500);
   }
 
-  if (auth.role !== "ADMIN" && auth.role !== "HR" && existing.employee_id !== currentEmployee?.id) {
-    return apiError("You do not have access to delete this request", 403);
+  if (auth.role !== "ADMIN" && auth.role !== "HR") {
+    if (existing.employee_id !== currentEmployee?.id) {
+      return apiError("You do not have access to delete this request", 403);
+    }
+    if (existing.status !== "PENDING") {
+      return apiError("Cannot delete a request that has already been processed.", 400);
+    }
   }
 
   const { error } = await auth.supabase.from("requests").delete().eq("id", id);

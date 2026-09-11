@@ -151,8 +151,8 @@ export function EditInterviewModal({ isOpen, interview, onClose, onSuccess }: Re
     <div className="modal-overlay" onClick={onClose} role="presentation">
       <div className="modal-container" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
         <div className="modal-header">
-          <h2>{t.actions.edit} Interview — {candidateDisplayName}</h2>
-          <button type="button" className="icon-button" onClick={onClose} aria-label="Close modal">
+          <h2>{t.interviews.editModalTitle} — {candidateDisplayName}</h2>
+          <button type="button" className="icon-button" onClick={onClose} aria-label={t.actions.cancel}>
             <X size={18} />
           </button>
         </div>
@@ -161,10 +161,10 @@ export function EditInterviewModal({ isOpen, interview, onClose, onSuccess }: Re
 
         <form onSubmit={handleSubmit} className="modal-form">
           <div className="form-group">
-            <label htmlFor="edit-int-interviewer">Assigned Interviewer</label>
+            <label htmlFor="edit-int-interviewer">{t.interviews.interviewerLabel}</label>
             {loadingRefs ? (
               <div style={{ display: "flex", alignItems: "center", gap: 8, padding: 8, fontSize: 13, color: "var(--muted)" }}>
-                <Loader2 className="loading-spinner" size={14} /> Loading interviewers...
+                <Loader2 className="loading-spinner" size={14} /> {t.actions.loading}
               </div>
             ) : (
               <select
@@ -172,7 +172,7 @@ export function EditInterviewModal({ isOpen, interview, onClose, onSuccess }: Re
                 value={interviewerId}
                 onChange={(e) => setInterviewerId(e.target.value)}
               >
-                <option value="">Unassigned</option>
+                <option value="">{t.interviews.selectInterviewer}</option>
                 {interviewers.map((emp) => (
                   <option key={emp.id} value={emp.id}>
                     {emp.full_name} ({emp.department} - {emp.position})
@@ -184,7 +184,7 @@ export function EditInterviewModal({ isOpen, interview, onClose, onSuccess }: Re
 
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="edit-int-date">Interview Date *</label>
+              <label htmlFor="edit-int-date">{t.interviews.dateLabel} *</label>
               <input
                 id="edit-int-date"
                 type="date"
@@ -194,7 +194,7 @@ export function EditInterviewModal({ isOpen, interview, onClose, onSuccess }: Re
               />
             </div>
             <div className="form-group">
-              <label htmlFor="edit-int-time">Interview Time *</label>
+              <label htmlFor="edit-int-time">{t.interviews.timeLabel} *</label>
               <input
                 id="edit-int-time"
                 type="time"
@@ -206,7 +206,7 @@ export function EditInterviewModal({ isOpen, interview, onClose, onSuccess }: Re
           </div>
 
           <div className="form-group">
-            <label htmlFor="edit-int-status">Status *</label>
+            <label htmlFor="edit-int-status">{t.interviews.statusLabel} *</label>
             <select
               id="edit-int-status"
               value={status}
@@ -219,7 +219,7 @@ export function EditInterviewModal({ isOpen, interview, onClose, onSuccess }: Re
           </div>
 
           <div className="form-group">
-            <label htmlFor="edit-int-notes">Notes / Agenda</label>
+            <label htmlFor="edit-int-notes">{t.interviews.notesLabel}</label>
             <textarea
               id="edit-int-notes"
               rows={3}

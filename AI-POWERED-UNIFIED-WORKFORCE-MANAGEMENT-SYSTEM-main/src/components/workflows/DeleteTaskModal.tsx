@@ -53,22 +53,22 @@ export function DeleteTaskModal({ isOpen, task, onClose, onSuccess }: Readonly<P
         <div className="modal-header" style={{ padding: "20px 24px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <div className="danger-icon-badge"><AlertTriangle size={20} /></div>
-            <h2 id="delete-task-title" style={{ fontSize: "20px", margin: 0 }}>Delete task?</h2>
+            <h2 id="delete-task-title" style={{ fontSize: "20px", margin: 0 }}>{t.workflows.deleteModalTitle}</h2>
           </div>
-          <button type="button" className="icon-button" onClick={onClose} disabled={deleting} aria-label="Close"><X size={18} /></button>
+          <button type="button" className="icon-button" onClick={onClose} disabled={deleting} aria-label={t.actions.cancel}><X size={18} /></button>
         </div>
         {error && <div className="auth-error" style={{ margin: "16px 24px 0" }}>{error}</div>}
         <div id="delete-task-desc" style={{ padding: "24px", color: "var(--muted)", fontSize: "15px", lineHeight: 1.5 }}>
-          Are you sure you want to delete{" "}
+          {t.workflows.deleteConfirmQuestion}{" "}
           <strong style={{ color: "var(--ink)", fontWeight: 600 }}>{'"'}{task.title}{'"'}</strong>?
-          {" "}This action cannot be undone.
+          {" "}{t.workflows.deletePermanentWarning}
         </div>
         <div className="modal-actions" style={{ padding: "16px 24px 20px", marginTop: 0, borderTop: "1px solid var(--line)" }}>
           <button type="button" className="secondary-button" onClick={onClose} disabled={deleting} style={{ height: "44px", padding: "0 20px" }}>
             {t.actions.cancel}
           </button>
           <button type="button" className="danger-button" onClick={handleDelete} disabled={deleting} style={{ height: "44px", padding: "0 20px" }}>
-            {deleting ? <><Loader2 className="loading-spinner" size={16} /> {t.actions.deleting}</> : <><Trash2 size={16} /> {t.actions.delete} task</>}
+            {deleting ? <><Loader2 className="loading-spinner" size={16} /> {t.actions.deleting}</> : <><Trash2 size={16} /> {t.workflows.deleteTask}</>}
           </button>
         </div>
       </div>

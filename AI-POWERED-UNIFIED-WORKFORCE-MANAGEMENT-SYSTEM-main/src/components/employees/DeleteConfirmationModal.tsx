@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AlertTriangle, Loader2, Trash2, X } from "lucide-react";
+import { useI18n } from "@/lib/i18n/I18nProvider";
 import { EmployeeEditRow } from "./EditEmployeeModal";
 
 type Props = {
@@ -12,6 +13,7 @@ type Props = {
 };
 
 export function DeleteConfirmationModal({ isOpen, employee, onClose, onSuccess }: Readonly<Props>) {
+  const { t } = useI18n();
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,19 +43,19 @@ export function DeleteConfirmationModal({ isOpen, employee, onClose, onSuccess }
       const payload = await res.json();
 
       if (!res.ok || !payload.success) {
-        throw new Error(payload.message || payload.error || "Failed to delete employee");
+        throw new Error(payload.message || payload.error || t.employees.loadError);
       }
 
       onSuccess(employee.id);
       onClose();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      setError(err instanceof Error ? err.message : t.errors.somethingWentWrong);
     } finally {
       setDeleting(false);
     }
   };
 
-  const displayName = employee.full_name || employee.employee_code || "this employee";
+  const displayName = employee.full_name || employee.employee_code || "—";
 
   return (
     <div
@@ -76,7 +78,7 @@ export function DeleteConfirmationModal({ isOpen, employee, onClose, onSuccess }
               <AlertTriangle size={20} />
             </div>
             <h2 id="delete-dialog-title" style={{ fontSize: "20px", margin: 0 }}>
-              Delete employee?
+              {t.employees.deleteModalTitle}
             </h2>
           </div>
           <button
@@ -84,7 +86,7 @@ export function DeleteConfirmationModal({ isOpen, employee, onClose, onSuccess }
             className="icon-button"
             onClick={onClose}
             disabled={deleting}
-            aria-label="Close"
+            aria-label={t.actions.close}
           >
             <X size={18} />
           </button>
@@ -105,8 +107,8 @@ export function DeleteConfirmationModal({ isOpen, employee, onClose, onSuccess }
             lineHeight: 1.5,
           }}
         >
-          Are you sure you want to delete{" "}
-          <strong style={{ color: "var(--ink)", fontWeight: 600 }}>{displayName}</strong>? This action cannot be undone.
+          {t.employees.deleteConfirmQuestion}{" "}
+          <strong style={{ color: "var(--ink)", fontWeight: 600 }}>{displayName}</strong>? {t.employees.deletePermanentWarning}
         </div>
 
         <div className="modal-actions" style={{ padding: "16px 24px 20px", marginTop: 0, borderTop: "1px solid var(--line)" }}>
@@ -117,7 +119,7 @@ export function DeleteConfirmationModal({ isOpen, employee, onClose, onSuccess }
             disabled={deleting}
             style={{ height: "44px", padding: "0 20px" }}
           >
-            Cancel
+            {t.actions.cancel}
           </button>
           <button
             type="button"
@@ -128,11 +130,11 @@ export function DeleteConfirmationModal({ isOpen, employee, onClose, onSuccess }
           >
             {deleting ? (
               <>
-                <Loader2 className="loading-spinner" size={16} /> Deleting...
+                <Loader2 className="loading-spinner" size={16} /> {t.actions.deleting}
               </>
             ) : (
               <>
-                <Trash2 size={16} /> Delete employee
+                <Trash2 size={16} /> {t.employees.deleteEmployee}
               </>
             )}
           </button>

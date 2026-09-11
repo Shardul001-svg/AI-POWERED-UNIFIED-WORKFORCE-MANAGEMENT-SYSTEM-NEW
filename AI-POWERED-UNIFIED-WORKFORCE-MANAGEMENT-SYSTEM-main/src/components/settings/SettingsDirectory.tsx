@@ -230,7 +230,7 @@ export function SettingsDirectory() {
 
                   <label>
                     {t.settings.role}
-                    <input type="text" value={profile?.role || ""} readOnly style={{ opacity: 0.7, cursor: "not-allowed" }} />
+                    <input type="text" value={profile?.role ? (t.roles[profile.role.toLowerCase() as keyof typeof t.roles] ?? profile.role) : ""} readOnly style={{ opacity: 0.7, cursor: "not-allowed" }} />
                     <small className="muted" style={{ marginTop: "0.25rem" }}>{t.settings.roleHelp}</small>
                   </label>
                 </div>
@@ -408,7 +408,7 @@ export function SettingsDirectory() {
 
               <div className="detail-stat detail-stat-wide" style={{ marginBottom: "1.5rem" }}>
                 <span className="detail-label" style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-                  <KeyRound size={14} /> Password Management
+                  <KeyRound size={14} /> {t.settings.passwordManagement}
                 </span>
                 <p className="muted" style={{ margin: "0.5rem 0 0" }}>
                   {t.settings.passwordInfo}

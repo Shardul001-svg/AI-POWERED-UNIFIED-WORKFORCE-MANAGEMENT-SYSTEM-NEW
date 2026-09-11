@@ -111,12 +111,15 @@ export async function POST(request: Request) {
     return apiError("Employee id is required", 400);
   }
 
+  const isManagement = auth.role === "ADMIN" || auth.role === "HR";
+  const initialStatus = isManagement && body.status && typeof body.status === "string" ? body.status : "PENDING";
+
   const payload = {
     employee_id: employeeId,
     type: String(body.type),
     title: String(body.title).trim(),
     description: body.description ? String(body.description).trim() : null,
-    status: body.status && typeof body.status === "string" ? body.status : "PENDING",
+    status: initialStatus,
   };
 
   const { data, error } = await auth.supabase.from("requests").insert(payload).select().single();

@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/auth/AuthProvider";
 import { I18nProvider } from "@/lib/i18n/I18nProvider";
 import { ThemeProvider } from "@/lib/theme/ThemeProvider";
+import ChatbotDragController from "@/components/ChatbotDragController";
 
 export const metadata: Metadata = {
   title: "workforceOS - AI-Powered Workforce Management System",
@@ -32,6 +33,9 @@ export default function RootLayout({
             `
           }}
         />
+
+        {/* Makes the Chatbase launcher movable via double-click (desktop) / long-press (mobile) */}
+        <ChatbotDragController />
       </body>
     </html>
   );

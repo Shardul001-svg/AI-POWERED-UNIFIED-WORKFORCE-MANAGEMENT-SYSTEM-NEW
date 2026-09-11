@@ -43,19 +43,19 @@ export function AddCandidateModal({ isOpen, onClose, onSuccess }: Readonly<Props
     e.preventDefault();
 
     if (!fullName.trim()) {
-      setError("Full name is required.");
+      setError(t.validation.fillRequiredFields);
       return;
     }
     if (!email.trim() || !email.includes("@")) {
-      setError("Please enter a valid email address.");
+      setError(t.validation.invalidEmail);
       return;
     }
     if (!positionApplied.trim()) {
-      setError("Please specify the position applied for.");
+      setError(t.validation.fillRequiredFields);
       return;
     }
     if (experience === "" || Number(experience) < 0) {
-      setError("Experience must be a non-negative number.");
+      setError(t.validation.fillRequiredFields);
       return;
     }
 
@@ -79,7 +79,7 @@ export function AddCandidateModal({ isOpen, onClose, onSuccess }: Readonly<Props
       const payload = await res.json();
 
       if (!res.ok || !payload.success) {
-        throw new Error(payload.message || payload.error || "Failed to create candidate");
+        throw new Error(payload.message || payload.error || t.candidates.loadError);
       }
 
       setFullName("");
@@ -92,7 +92,7 @@ export function AddCandidateModal({ isOpen, onClose, onSuccess }: Readonly<Props
       onSuccess();
       onClose();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      setError(err instanceof Error ? err.message : t.errors.somethingWentWrong);
     } finally {
       setSubmitting(false);
     }
@@ -102,8 +102,8 @@ export function AddCandidateModal({ isOpen, onClose, onSuccess }: Readonly<Props
     <div className="modal-overlay" onClick={onClose} role="presentation">
       <div className="modal-container" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
         <div className="modal-header">
-          <h2>+ {t.actions.add} Candidate</h2>
-          <button type="button" className="icon-button" onClick={onClose} aria-label="Close">
+          <h2>{t.candidates.addModalTitle}</h2>
+          <button type="button" className="icon-button" onClick={onClose} aria-label={t.actions.close}>
             <X size={18} />
           </button>
         </div>
@@ -112,7 +112,7 @@ export function AddCandidateModal({ isOpen, onClose, onSuccess }: Readonly<Props
 
         <form onSubmit={handleSubmit} className="modal-form">
           <div className="form-group">
-            <label htmlFor="cand-name">Full Name *</label>
+            <label htmlFor="cand-name">{t.candidates.fullName} *</label>
             <input
               id="cand-name"
               type="text"
@@ -124,7 +124,7 @@ export function AddCandidateModal({ isOpen, onClose, onSuccess }: Readonly<Props
           </div>
 
           <div className="form-group">
-            <label htmlFor="cand-email">Email Address *</label>
+            <label htmlFor="cand-email">{t.candidates.emailAddress} *</label>
             <input
               id="cand-email"
               type="email"
@@ -137,7 +137,7 @@ export function AddCandidateModal({ isOpen, onClose, onSuccess }: Readonly<Props
 
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="cand-pos">Position Applied *</label>
+              <label htmlFor="cand-pos">{t.candidates.positionApplied} *</label>
               <input
                 id="cand-pos"
                 type="text"
@@ -148,7 +148,7 @@ export function AddCandidateModal({ isOpen, onClose, onSuccess }: Readonly<Props
               />
             </div>
             <div className="form-group">
-              <label htmlFor="cand-exp">Experience (Years) *</label>
+              <label htmlFor="cand-exp">{t.candidates.yearsOfExperience} *</label>
               <input
                 id="cand-exp"
                 type="number"
@@ -162,7 +162,7 @@ export function AddCandidateModal({ isOpen, onClose, onSuccess }: Readonly<Props
 
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="cand-phone">Phone Number</label>
+              <label htmlFor="cand-phone">{t.candidates.phone}</label>
               <input
                 id="cand-phone"
                 type="text"
@@ -172,7 +172,7 @@ export function AddCandidateModal({ isOpen, onClose, onSuccess }: Readonly<Props
               />
             </div>
             <div className="form-group">
-              <label htmlFor="cand-status">Pipeline Status *</label>
+              <label htmlFor="cand-status">{t.candidates.applicationStatus} *</label>
               <select
                 id="cand-status"
                 value={status}
@@ -197,7 +197,7 @@ export function AddCandidateModal({ isOpen, onClose, onSuccess }: Readonly<Props
                   <Loader2 className="loading-spinner" size={14} /> {t.actions.submitting}
                 </>
               ) : (
-                `+ ${t.actions.add} Candidate`
+                t.candidates.addCandidate
               )}
             </button>
           </div>

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { FormEvent, useEffect, useState } from "react";
 import { Loader2, X } from "lucide-react";
@@ -111,38 +111,38 @@ export function CreateTaskModal({ isOpen, onClose, onSuccess }: Readonly<Props>)
     <div className="modal-overlay" onClick={onClose} role="presentation">
       <div className="modal-container" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
         <div className="modal-header">
-          <h2>+ Create Task</h2>
-          <button type="button" className="icon-button" onClick={onClose} aria-label="Close"><X size={18} /></button>
+          <h2>+ {t.workflows.createModalTitle}</h2>
+          <button type="button" className="icon-button" onClick={onClose} aria-label={t.actions.cancel}><X size={18} /></button>
         </div>
         {error && <div className="auth-error" style={{ marginBottom: 16 }}>{error}</div>}
         <form onSubmit={handleSubmit} className="modal-form">
           <div className="form-group">
-            <label htmlFor="task-title">Title *</label>
+            <label htmlFor="task-title">{t.workflows.titleLabel} *</label>
             <input id="task-title" type="text" required placeholder="e.g. Review onboarding checklist" value={title} onChange={(e) => setTitle(e.target.value)} />
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="task-status">Status</label>
+              <label htmlFor="task-status">{t.workflows.statusLabel}</label>
               <select id="task-status" value={status} onChange={(e) => setStatus(e.target.value as TaskStatus)}>
-                {(Object.keys(STATUS_LABELS) as TaskStatus[]).map((v) => (
-                  <option key={v} value={v}>{STATUS_LABELS[v]}</option>
-                ))}
+                <option value="TODO">{t.statuses.todo}</option>
+                <option value="IN_PROGRESS">{t.statuses.inProgress}</option>
+                <option value="COMPLETED">{t.statuses.completed}</option>
               </select>
             </div>
             <div className="form-group">
-              <label htmlFor="task-due">Due Date</label>
+              <label htmlFor="task-due">{t.workflows.dueDateLabel}</label>
               <input id="task-due" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
             </div>
           </div>
           <div className="form-group">
-            <label htmlFor="task-assignee">Assign To</label>
+            <label htmlFor="task-assignee">{t.workflows.assignedToLabel}</label>
             {loadingProfiles ? (
               <div style={{ display: "flex", alignItems: "center", gap: 8, padding: 8, fontSize: 13, color: "var(--muted)" }}>
-                <Loader2 className="loading-spinner" size={14} /> Loading profiles...
+                <Loader2 className="loading-spinner" size={14} /> {t.actions.loading}
               </div>
             ) : (
               <select id="task-assignee" value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)} disabled={role === "EMPLOYEE"}>
-                <option value="">Unassigned</option>
+                <option value="">{t.workflows.unassigned}</option>
                 {profiles.map((p) => (
                   <option key={p.id} value={p.id}>{p.full_name}{p.department ? ` — ${p.department}` : ""}</option>
                 ))}
@@ -150,13 +150,13 @@ export function CreateTaskModal({ isOpen, onClose, onSuccess }: Readonly<Props>)
             )}
           </div>
           <div className="form-group">
-            <label htmlFor="task-desc">Description (Optional)</label>
+            <label htmlFor="task-desc">{t.workflows.descriptionLabel}</label>
             <textarea id="task-desc" rows={4} placeholder="Describe the task in detail..." value={description} onChange={(e) => setDescription(e.target.value)} />
           </div>
           <div className="modal-actions">
             <button type="button" className="secondary-button" onClick={onClose} disabled={submitting}>{t.actions.cancel}</button>
             <button type="submit" className="primary-button" disabled={submitting}>
-              {submitting ? <><Loader2 className="loading-spinner" size={14} /> Creating...</> : "+ Create Task"}
+              {submitting ? <><Loader2 className="loading-spinner" size={14} /> {t.actions.saving}</> : `+ ${t.workflows.createTask}`}
             </button>
           </div>
         </form>

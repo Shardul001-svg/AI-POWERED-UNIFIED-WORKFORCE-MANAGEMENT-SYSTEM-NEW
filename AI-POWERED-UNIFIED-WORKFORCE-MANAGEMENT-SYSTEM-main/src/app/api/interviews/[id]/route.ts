@@ -25,6 +25,14 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     return apiError("Interview not found", 404);
   }
 
+  if (auth.role === "EMPLOYEE" && data.interviewer !== auth.profile.id) {
+    return apiError("You do not have access to this interview record", 403);
+  }
+
+  if (auth.role === "CANDIDATE" && data.candidates?.email?.toLowerCase() !== auth.user?.email?.toLowerCase()) {
+    return apiError("You do not have access to this interview record", 403);
+  }
+
   return apiSuccess({
     ...data,
     candidate_name: data.candidates?.full_name ?? null,

@@ -23,7 +23,7 @@ function getNavLabel(href: string, t: ReturnType<typeof useI18n>["t"], defaultLa
     case "/interviews":
       return t.nav.interviews;
     case "/requests":
-      return t.nav.requests;
+      return defaultLabel === "My requests" ? t.nav.myRequests : t.nav.requests;
     case "/workflows":
       return t.nav.workflows;
     case "/notifications":
@@ -35,6 +35,14 @@ function getNavLabel(href: string, t: ReturnType<typeof useI18n>["t"], defaultLa
     default:
       return defaultLabel;
   }
+}
+
+function getRoleLabel(role: string | null | undefined, t: ReturnType<typeof useI18n>["t"]): string {
+  if (!role) return "";
+  if (role in t.roles) {
+    return t.roles[role as keyof typeof t.roles];
+  }
+  return role;
 }
 
 export function ProtectedShell({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -152,15 +160,15 @@ export function ProtectedShell({ children }: Readonly<{ children: React.ReactNod
             onClick={() => setWorkspaceMenuOpen((open) => !open)}
             aria-expanded={workspaceMenuOpen}
           >
-            <span className="workspace-dot" /> Northstar HQ <ChevronDown size={14} />
+            <span className="workspace-dot" /> {t.nav.northstarHq} <ChevronDown size={14} />
           </button>
           {workspaceMenuOpen ? (
             <div className="workspace-menu">
               <button type="button" onClick={() => setWorkspaceMenuOpen(false)}>
-                Northstar HQ
+                {t.nav.northstarHq}
               </button>
               <button type="button" onClick={() => setWorkspaceMenuOpen(false)}>
-                Operations Hub
+                {t.nav.operationsHub}
               </button>
             </div>
           ) : null}
@@ -186,7 +194,7 @@ export function ProtectedShell({ children }: Readonly<{ children: React.ReactNod
             <div>
               <strong>{profile.full_name || "Workspace user"}</strong>
               <span>{user.email}</span>
-              <em>{role}</em>
+              <em>{getRoleLabel(role, t)}</em>
             </div>
           </div>
           <button type="button" className="logout-button" onClick={() => void handleLogout()} disabled={loggingOut}>
@@ -215,7 +223,7 @@ export function ProtectedShell({ children }: Readonly<{ children: React.ReactNod
             <button
               type="button"
               className="protected-notification"
-              aria-label="Notifications"
+              aria-label={t.nav.notifications}
               onClick={() => router.push("/notifications")}
             >
               <Bell size={18} />
@@ -229,7 +237,7 @@ export function ProtectedShell({ children }: Readonly<{ children: React.ReactNod
               <div className="avatar">{initials}</div>
               <div>
                 <strong>{profile.full_name || "Workspace user"}</strong>
-                <span>{role}</span>
+                <span>{getRoleLabel(role, t)}</span>
               </div>
             </button>
             {profileMenuOpen ? (

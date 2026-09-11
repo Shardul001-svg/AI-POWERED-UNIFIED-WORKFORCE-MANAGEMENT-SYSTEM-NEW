@@ -54,19 +54,19 @@ export function EditCandidateModal({ isOpen, candidate, onClose, onSuccess }: Re
     e.preventDefault();
 
     if (!fullName.trim()) {
-      setError("Full name is required.");
+      setError(t.validation.fillRequiredFields);
       return;
     }
     if (!email.trim() || !email.includes("@")) {
-      setError("Please enter a valid email address.");
+      setError(t.validation.invalidEmail);
       return;
     }
     if (!positionApplied.trim()) {
-      setError("Please specify the position applied for.");
+      setError(t.validation.fillRequiredFields);
       return;
     }
     if (experience === "" || Number(experience) < 0) {
-      setError("Experience must be a non-negative number.");
+      setError(t.validation.fillRequiredFields);
       return;
     }
 
@@ -90,7 +90,7 @@ export function EditCandidateModal({ isOpen, candidate, onClose, onSuccess }: Re
       const payload = await res.json();
 
       if (!res.ok || !payload.success) {
-        throw new Error(payload.message || payload.error || "Failed to update candidate");
+        throw new Error(payload.message || payload.error || t.candidates.loadError);
       }
 
       onSuccess({
@@ -104,7 +104,7 @@ export function EditCandidateModal({ isOpen, candidate, onClose, onSuccess }: Re
       });
       onClose();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      setError(err instanceof Error ? err.message : t.errors.somethingWentWrong);
     } finally {
       setSubmitting(false);
     }
@@ -114,8 +114,8 @@ export function EditCandidateModal({ isOpen, candidate, onClose, onSuccess }: Re
     <div className="modal-overlay" onClick={onClose} role="presentation">
       <div className="modal-container" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
         <div className="modal-header">
-          <h2>{t.actions.edit} Candidate</h2>
-          <button type="button" className="icon-button" onClick={onClose} aria-label="Close modal">
+          <h2>{t.candidates.editModalTitle}</h2>
+          <button type="button" className="icon-button" onClick={onClose} aria-label={t.actions.close}>
             <X size={18} />
           </button>
         </div>
@@ -124,7 +124,7 @@ export function EditCandidateModal({ isOpen, candidate, onClose, onSuccess }: Re
 
         <form onSubmit={handleSubmit} className="modal-form">
           <div className="form-group">
-            <label htmlFor="edit-cand-name">Full Name *</label>
+            <label htmlFor="edit-cand-name">{t.candidates.fullName} *</label>
             <input
               id="edit-cand-name"
               type="text"
@@ -135,7 +135,7 @@ export function EditCandidateModal({ isOpen, candidate, onClose, onSuccess }: Re
           </div>
 
           <div className="form-group">
-            <label htmlFor="edit-cand-email">Email Address *</label>
+            <label htmlFor="edit-cand-email">{t.candidates.emailAddress} *</label>
             <input
               id="edit-cand-email"
               type="email"
@@ -147,7 +147,7 @@ export function EditCandidateModal({ isOpen, candidate, onClose, onSuccess }: Re
 
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="edit-cand-pos">Position Applied *</label>
+              <label htmlFor="edit-cand-pos">{t.candidates.positionApplied} *</label>
               <input
                 id="edit-cand-pos"
                 type="text"
@@ -157,7 +157,7 @@ export function EditCandidateModal({ isOpen, candidate, onClose, onSuccess }: Re
               />
             </div>
             <div className="form-group">
-              <label htmlFor="edit-cand-exp">Experience (Years) *</label>
+              <label htmlFor="edit-cand-exp">{t.candidates.yearsOfExperience} *</label>
               <input
                 id="edit-cand-exp"
                 type="number"
@@ -171,7 +171,7 @@ export function EditCandidateModal({ isOpen, candidate, onClose, onSuccess }: Re
 
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="edit-cand-phone">Phone Number</label>
+              <label htmlFor="edit-cand-phone">{t.candidates.phone}</label>
               <input
                 id="edit-cand-phone"
                 type="text"
@@ -180,7 +180,7 @@ export function EditCandidateModal({ isOpen, candidate, onClose, onSuccess }: Re
               />
             </div>
             <div className="form-group">
-              <label htmlFor="edit-cand-status">Pipeline Status *</label>
+              <label htmlFor="edit-cand-status">{t.candidates.applicationStatus} *</label>
               <select
                 id="edit-cand-status"
                 value={status}

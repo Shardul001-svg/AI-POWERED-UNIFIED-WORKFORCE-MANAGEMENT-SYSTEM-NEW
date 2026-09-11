@@ -172,8 +172,8 @@ export function ScheduleInterviewModal({ isOpen, onClose, onSuccess }: Readonly<
     <div className="modal-overlay" onClick={onClose} role="presentation">
       <div className="modal-container" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
         <div className="modal-header">
-          <h2>+ Schedule Interview</h2>
-          <button type="button" className="icon-button" onClick={onClose} aria-label="Close">
+          <h2>+ {t.interviews.scheduleModalTitle}</h2>
+          <button type="button" className="icon-button" onClick={onClose} aria-label={t.actions.cancel}>
             <X size={18} />
           </button>
         </div>
@@ -182,16 +182,16 @@ export function ScheduleInterviewModal({ isOpen, onClose, onSuccess }: Readonly<
 
         {candidates.length === 0 && !loadingRefs ? (
           <div className="auth-error" style={{ marginBottom: 16, background: "var(--yellow-light)", color: "var(--yellow)" }}>
-            No candidates available yet. Please add a candidate before scheduling an interview.
+            {t.interviews.emptyNoRecordsDesc}
           </div>
         ) : null}
 
         <form onSubmit={handleSubmit} className="modal-form">
           <div className="form-group">
-            <label htmlFor="int-candidate">Candidate *</label>
+            <label htmlFor="int-candidate">{t.interviews.candidateLabel} *</label>
             {loadingRefs ? (
               <div style={{ display: "flex", alignItems: "center", gap: 8, padding: 8, fontSize: 13, color: "var(--muted)" }}>
-                <Loader2 className="loading-spinner" size={14} /> Loading candidates...
+                <Loader2 className="loading-spinner" size={14} /> {t.actions.loading}
               </div>
             ) : (
               <select
@@ -202,7 +202,7 @@ export function ScheduleInterviewModal({ isOpen, onClose, onSuccess }: Readonly<
                 disabled={candidates.length === 0}
               >
                 {candidates.length === 0 ? (
-                  <option value="">No candidates registered</option>
+                  <option value="">{t.candidates.emptyNoRecords}</option>
                 ) : (
                   candidates.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -215,10 +215,10 @@ export function ScheduleInterviewModal({ isOpen, onClose, onSuccess }: Readonly<
           </div>
 
           <div className="form-group">
-            <label htmlFor="int-interviewer">Assigned Interviewer</label>
+            <label htmlFor="int-interviewer">{t.interviews.interviewerLabel}</label>
             {loadingRefs ? (
               <div style={{ display: "flex", alignItems: "center", gap: 8, padding: 8, fontSize: 13, color: "var(--muted)" }}>
-                <Loader2 className="loading-spinner" size={14} /> Loading interviewers...
+                <Loader2 className="loading-spinner" size={14} /> {t.actions.loading}
               </div>
             ) : (
               <select
@@ -226,7 +226,7 @@ export function ScheduleInterviewModal({ isOpen, onClose, onSuccess }: Readonly<
                 value={interviewerId}
                 onChange={(e) => setInterviewerId(e.target.value)}
               >
-                <option value="">Default (Current User)</option>
+                <option value="">{t.interviews.selectInterviewer}</option>
                 {interviewers.map((emp) => (
                   <option key={emp.id} value={emp.id}>
                     {emp.full_name} ({emp.department} - {emp.position})
@@ -238,7 +238,7 @@ export function ScheduleInterviewModal({ isOpen, onClose, onSuccess }: Readonly<
 
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="int-date">Interview Date *</label>
+              <label htmlFor="int-date">{t.interviews.dateLabel} *</label>
               <input
                 id="int-date"
                 type="date"
@@ -248,7 +248,7 @@ export function ScheduleInterviewModal({ isOpen, onClose, onSuccess }: Readonly<
               />
             </div>
             <div className="form-group">
-              <label htmlFor="int-time">Interview Time *</label>
+              <label htmlFor="int-time">{t.interviews.timeLabel} *</label>
               <input
                 id="int-time"
                 type="time"
@@ -260,7 +260,7 @@ export function ScheduleInterviewModal({ isOpen, onClose, onSuccess }: Readonly<
           </div>
 
           <div className="form-group">
-            <label htmlFor="int-status">Status *</label>
+            <label htmlFor="int-status">{t.interviews.statusLabel} *</label>
             <select
               id="int-status"
               value={status}
@@ -273,7 +273,7 @@ export function ScheduleInterviewModal({ isOpen, onClose, onSuccess }: Readonly<
           </div>
 
           <div className="form-group">
-            <label htmlFor="int-notes">Notes / Agenda (Optional)</label>
+            <label htmlFor="int-notes">{t.interviews.notesLabel}</label>
             <textarea
               id="int-notes"
               rows={3}
@@ -290,10 +290,10 @@ export function ScheduleInterviewModal({ isOpen, onClose, onSuccess }: Readonly<
             <button type="submit" className="primary-button" disabled={submitting || candidates.length === 0}>
               {submitting ? (
                 <>
-                  <Loader2 className="loading-spinner" size={14} /> Scheduling...
+                  <Loader2 className="loading-spinner" size={14} /> {t.actions.saving}
                 </>
               ) : (
-                "+ Schedule Interview"
+                `+ ${t.interviews.scheduleInterview}`
               )}
             </button>
           </div>

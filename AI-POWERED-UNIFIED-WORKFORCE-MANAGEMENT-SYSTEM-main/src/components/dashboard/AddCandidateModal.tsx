@@ -27,7 +27,7 @@ export function AddCandidateModal({ isOpen, onClose, onSuccess }: Readonly<Props
     e.preventDefault();
 
     if (!fullName.trim() || !email.trim() || !positionApplied.trim()) {
-      setError("Please fill in all required fields.");
+      setError(t.validation.fillRequiredFields);
       return;
     }
 
@@ -51,13 +51,13 @@ export function AddCandidateModal({ isOpen, onClose, onSuccess }: Readonly<Props
       const payload = await res.json();
 
       if (!res.ok || !payload.success) {
-        throw new Error(payload.message || payload.error || "Failed to create candidate");
+        throw new Error(payload.message || payload.error || t.candidates.loadError);
       }
 
       onSuccess();
       onClose();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      setError(err instanceof Error ? err.message : t.errors.somethingWentWrong);
     } finally {
       setSubmitting(false);
     }
@@ -67,8 +67,8 @@ export function AddCandidateModal({ isOpen, onClose, onSuccess }: Readonly<Props
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-container" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>+ {t.actions.add} Candidate</h2>
-          <button type="button" className="icon-button" onClick={onClose} aria-label="Close">
+          <h2>{t.candidates.addModalTitle}</h2>
+          <button type="button" className="icon-button" onClick={onClose} aria-label={t.actions.close}>
             <X size={18} />
           </button>
         </div>
@@ -77,7 +77,7 @@ export function AddCandidateModal({ isOpen, onClose, onSuccess }: Readonly<Props
 
         <form onSubmit={handleSubmit} className="modal-form">
           <div className="form-group">
-            <label htmlFor="cand-name">Full Name *</label>
+            <label htmlFor="cand-name">{t.candidates.fullName} *</label>
             <input
               id="cand-name"
               type="text"
@@ -89,7 +89,7 @@ export function AddCandidateModal({ isOpen, onClose, onSuccess }: Readonly<Props
           </div>
 
           <div className="form-group">
-            <label htmlFor="cand-email">Email Address *</label>
+            <label htmlFor="cand-email">{t.candidates.emailAddress} *</label>
             <input
               id="cand-email"
               type="email"
@@ -102,7 +102,7 @@ export function AddCandidateModal({ isOpen, onClose, onSuccess }: Readonly<Props
 
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="cand-phone">Phone Number</label>
+              <label htmlFor="cand-phone">{t.candidates.phone}</label>
               <input
                 id="cand-phone"
                 type="text"
@@ -112,7 +112,7 @@ export function AddCandidateModal({ isOpen, onClose, onSuccess }: Readonly<Props
               />
             </div>
             <div className="form-group">
-              <label htmlFor="cand-exp">Experience (Years) *</label>
+              <label htmlFor="cand-exp">{t.candidates.yearsOfExperience} *</label>
               <input
                 id="cand-exp"
                 type="number"
@@ -127,7 +127,7 @@ export function AddCandidateModal({ isOpen, onClose, onSuccess }: Readonly<Props
 
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="cand-pos">Position Applied *</label>
+              <label htmlFor="cand-pos">{t.candidates.positionApplied} *</label>
               <input
                 id="cand-pos"
                 type="text"
@@ -137,13 +137,13 @@ export function AddCandidateModal({ isOpen, onClose, onSuccess }: Readonly<Props
               />
             </div>
             <div className="form-group">
-              <label htmlFor="cand-status">Pipeline Status *</label>
+              <label htmlFor="cand-status">{t.candidates.applicationStatus} *</label>
               <select id="cand-status" value={status} onChange={(e) => setStatus(e.target.value)}>
-                <option value="APPLIED">Applied</option>
-                <option value="SCREENING">Screening</option>
-                <option value="INTERVIEW">Interview</option>
-                <option value="SELECTED">Selected</option>
-                <option value="REJECTED">Rejected</option>
+                <option value="APPLIED">{t.statuses.applied}</option>
+                <option value="SCREENING">{t.statuses.screening}</option>
+                <option value="INTERVIEW">{t.statuses.interview}</option>
+                <option value="SELECTED">{t.statuses.selected}</option>
+                <option value="REJECTED">{t.statuses.rejected}</option>
               </select>
             </div>
           </div>
@@ -153,7 +153,7 @@ export function AddCandidateModal({ isOpen, onClose, onSuccess }: Readonly<Props
               {t.actions.cancel}
             </button>
             <button type="submit" className="primary-button" disabled={submitting}>
-              {submitting ? t.actions.submitting : "+ Add Candidate"}
+              {submitting ? t.actions.submitting : t.candidates.addCandidate}
             </button>
           </div>
         </form>

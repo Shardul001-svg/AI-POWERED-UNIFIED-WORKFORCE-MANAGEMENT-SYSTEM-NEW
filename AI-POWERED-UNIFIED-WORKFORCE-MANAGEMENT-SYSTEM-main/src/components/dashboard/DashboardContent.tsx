@@ -119,12 +119,16 @@ export function DashboardContent() {
   }, []);
 
   const greetingName = profile?.full_name || "Workspace user";
-  const formattedDate = new Date().toLocaleDateString("en-US", {
+  const { formatDate } = useI18n();
+  const formattedDate = formatDate(new Date(), {
     weekday: "long",
     year: "numeric",
     month: "long",
     day: "numeric",
   });
+
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? t.dashboard.goodMorning : hour < 17 ? t.dashboard.goodAfternoon : t.dashboard.goodEvening;
 
   return (
     <div className="protected-page-content">
@@ -135,10 +139,10 @@ export function DashboardContent() {
             <p className="eyebrow">{formattedDate}</p>
             <span className={`live-badge ${isLive ? "active" : "connecting"}`}>
               <Radio size={12} />
-              {isLive ? "Live updates" : "Reconnecting..."}
+              {isLive ? t.dashboard.liveUpdates : t.dashboard.reconnecting}
             </span>
           </div>
-          <h1>Good morning, {greetingName.split(" ")[0]}.</h1>
+          <h1>{greeting}, {greetingName.split(" ")[0]}.</h1>
           <p className="muted">{t.pages.dashboardSubtitle}</p>
         </div>
 
@@ -151,21 +155,21 @@ export function DashboardContent() {
                 className="secondary-button"
                 onClick={() => setAddEmployeeOpen(true)}
               >
-                <UserPlus size={14} /> + Add Employee
+                <UserPlus size={14} /> {t.dashboard.addEmployeeBtn}
               </button>
               <button
                 type="button"
                 className="secondary-button"
                 onClick={() => setAddCandidateOpen(true)}
               >
-                <UserPlus size={14} /> + Add Candidate
+                <UserPlus size={14} /> {t.dashboard.addCandidateBtn}
               </button>
               <button
                 type="button"
                 className="primary-button"
                 onClick={() => setScheduleInterviewOpen(true)}
               >
-                <CalendarDays size={14} /> Schedule Interview
+                <CalendarDays size={14} /> {t.dashboard.scheduleInterviewBtn}
               </button>
             </>
           )}
@@ -175,7 +179,7 @@ export function DashboardContent() {
               className="primary-button"
               onClick={() => setCreateRequestOpen(true)}
             >
-              <Plus size={14} /> Create Request
+              <Plus size={14} /> {t.dashboard.createRequestBtn}
             </button>
           )}
         </div>
@@ -193,9 +197,9 @@ export function DashboardContent() {
           <div className="metric-icon teal">
             <Users size={17} />
           </div>
-          <span className="metric-label">Total registered users</span>
+          <span className="metric-label">{t.dashboard.totalRegisteredUsers}</span>
           <strong>{loading ? "..." : (stats?.totalUsers ?? 0)}</strong>
-          <span className="metric-change positive">Registered profiles</span>
+          <span className="metric-change positive">{t.dashboard.registeredProfiles}</span>
         </button>
 
         <button
@@ -206,9 +210,9 @@ export function DashboardContent() {
           <div className="metric-icon teal">
             <UsersRound size={17} />
           </div>
-          <span className="metric-label">Employees</span>
+          <span className="metric-label">{t.dashboard.employeesMetric}</span>
           <strong>{loading ? "..." : (stats?.totalEmployees ?? 0)}</strong>
-          <span className="metric-change positive">Active workforce</span>
+          <span className="metric-change positive">{t.dashboard.activeWorkforce}</span>
         </button>
 
         <button
@@ -219,9 +223,9 @@ export function DashboardContent() {
           <div className="metric-icon blue">
             <FileSpreadsheet size={17} />
           </div>
-          <span className="metric-label">Candidates</span>
+          <span className="metric-label">{t.dashboard.candidatesMetric}</span>
           <strong>{loading ? "..." : (stats?.totalCandidates ?? 0)}</strong>
-          <span className="metric-change neutral">Recruitment pipeline</span>
+          <span className="metric-change neutral">{t.dashboard.recruitmentPipeline}</span>
         </button>
 
         <button
@@ -232,9 +236,9 @@ export function DashboardContent() {
           <div className="metric-icon coral">
             <CalendarClock size={17} />
           </div>
-          <span className="metric-label">Interviews scheduled</span>
+          <span className="metric-label">{t.dashboard.interviewsScheduledMetric}</span>
           <strong>{loading ? "..." : (stats?.scheduledInterviews ?? 0)}</strong>
-          <span className="metric-change warning">Upcoming sessions</span>
+          <span className="metric-change warning">{t.dashboard.upcomingSessions}</span>
         </button>
 
         <button
@@ -245,9 +249,9 @@ export function DashboardContent() {
           <div className="metric-icon yellow">
             <CheckCircle2 size={17} />
           </div>
-          <span className="metric-label">Pending requests</span>
+          <span className="metric-label">{t.dashboard.pendingRequestsMetric}</span>
           <strong>{loading ? "..." : (stats?.pendingRequests ?? 0)}</strong>
-          <span className="metric-change warning">Awaiting review</span>
+          <span className="metric-change warning">{t.dashboard.requiresReview}</span>
         </button>
 
         <button
@@ -258,9 +262,9 @@ export function DashboardContent() {
           <div className="metric-icon coral">
             <Bell size={17} />
           </div>
-          <span className="metric-label">Unread notifications</span>
+          <span className="metric-label">{t.dashboard.unreadNotificationsMetric}</span>
           <strong>{loading ? "..." : (stats?.unreadNotifications ?? 0)}</strong>
-          <span className="metric-change neutral">Personal updates</span>
+          <span className="metric-change neutral">{t.dashboard.needsAttention}</span>
         </button>
       </div>
 
@@ -270,22 +274,22 @@ export function DashboardContent() {
         <section className="protected-panel schedule-panel">
           <div className="protected-panel-heading">
             <div>
-              <h2>Schedule & Interviews</h2>
-              <p className="muted">Upcoming candidate interviews and scheduled sessions.</p>
+              <h2>{t.dashboard.todaySchedule}</h2>
+              <p className="muted">{t.pages.interviewsSubtitle}</p>
             </div>
             <button
               type="button"
               className="text-link"
               onClick={() => router.push("/interviews")}
             >
-              View schedule <ArrowUpRight size={15} />
+              {t.dashboard.viewAllInterviews} <ArrowUpRight size={15} />
             </button>
           </div>
 
           <div className="schedule-list">
             {loading ? (
               <div className="empty-state">
-                <span className="loading-spinner" /> Loading schedule...
+                <span className="loading-spinner" /> {t.actions.loading}
               </div>
             ) : stats?.todayInterviews && stats.todayInterviews.length > 0 ? (
               stats.todayInterviews.map((item) => (
@@ -307,13 +311,13 @@ export function DashboardContent() {
                   </span>
                   <span className={`status ${item.status === "SCHEDULED" ? "status-on" : "status-soon"}`}>
                     <i />
-                    {item.status}
+                    {t.statuses[item.status.toLowerCase() as keyof typeof t.statuses] || item.status}
                   </span>
                 </div>
               ))
             ) : (
               <div className="empty-state">
-                No interviews or scheduled activities for today.
+                {t.dashboard.noInterviewsToday}
               </div>
             )}
           </div>
@@ -323,7 +327,7 @@ export function DashboardContent() {
             className="panel-footer-link"
             onClick={() => router.push("/interviews")}
           >
-            Go to interview schedules <ArrowUpRight size={14} />
+            {t.dashboard.viewAllInterviews} <ArrowUpRight size={14} />
           </button>
         </section>
 
@@ -331,16 +335,16 @@ export function DashboardContent() {
         <section className="protected-panel coverage-panel">
           <div className="protected-panel-heading">
             <div>
-              <h2>Recent Activity</h2>
-              <p className="muted">Real audit stream from system operations.</p>
+              <h2>{t.dashboard.recentActivity}</h2>
+              <p className="muted">{t.dashboard.workspaceOverview}</p>
             </div>
-            <span className="panel-kicker">Live Stream</span>
+            <span className="panel-kicker">{t.dashboard.liveUpdates}</span>
           </div>
 
           <div className="activity-list">
             {loading ? (
               <div className="empty-state">
-                <span className="loading-spinner" /> Loading activities...
+                <span className="loading-spinner" /> {t.actions.loading}
               </div>
             ) : stats?.recentActivities && stats.recentActivities.length > 0 ? (
               stats.recentActivities.map((act) => (
@@ -357,7 +361,7 @@ export function DashboardContent() {
                 </div>
               ))
             ) : (
-              <div className="empty-state">No recent activity.</div>
+              <div className="empty-state">{t.dashboard.noRecentActivity}</div>
             )}
           </div>
         </section>

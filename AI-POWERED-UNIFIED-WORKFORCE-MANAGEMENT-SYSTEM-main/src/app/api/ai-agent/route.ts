@@ -35,10 +35,11 @@ Worker question: ${message}`;
     });
 
     return NextResponse.json({ response: text });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("AI Agent Catch Error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Failed to process request";
     return NextResponse.json(
-      { error: error?.message || "Failed to process request" },
+      { error: errorMessage },
       { status: 500 }
     );
   }

@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { Loader2, X } from "lucide-react";
+import { useI18n } from "@/lib/i18n/I18nProvider";
 
 export type EmployeeEditRow = {
   id: string;
@@ -24,6 +25,7 @@ type Props = {
 };
 
 export function EditEmployeeModal({ isOpen, employee, onClose, onSuccess }: Readonly<Props>) {
+  const { t } = useI18n();
   const [fullName, setFullName] = useState(employee?.full_name || "");
   const [email, setEmail] = useState(employee?.email || "");
   const [employeeCode, setEmployeeCode] = useState(employee?.employee_code || "");
@@ -54,7 +56,7 @@ export function EditEmployeeModal({ isOpen, employee, onClose, onSuccess }: Read
     e.preventDefault();
 
     if (!fullName.trim() || !email.trim() || !employeeCode.trim() || !department.trim() || !position.trim() || !joiningDate.trim()) {
-      setError("Please fill in all required fields.");
+      setError(t.validation.fillRequiredFields);
       return;
     }
 
@@ -106,8 +108,8 @@ export function EditEmployeeModal({ isOpen, employee, onClose, onSuccess }: Read
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-container" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>Edit Employee</h2>
-          <button type="button" className="icon-button" onClick={onClose} aria-label="Close modal">
+          <h2>{t.employees.editModalTitle}</h2>
+          <button type="button" className="icon-button" onClick={onClose} aria-label={t.actions.close}>
             <X size={18} />
           </button>
         </div>
@@ -116,7 +118,7 @@ export function EditEmployeeModal({ isOpen, employee, onClose, onSuccess }: Read
 
         <form onSubmit={handleSubmit} className="modal-form">
           <div className="form-group">
-            <label htmlFor="edit-emp-name">Full Name *</label>
+            <label htmlFor="edit-emp-name">{t.employees.fullName} *</label>
             <input
               id="edit-emp-name"
               type="text"
@@ -127,7 +129,7 @@ export function EditEmployeeModal({ isOpen, employee, onClose, onSuccess }: Read
           </div>
 
           <div className="form-group">
-            <label htmlFor="edit-emp-email">Email Address *</label>
+            <label htmlFor="edit-emp-email">{t.employees.emailAddress} *</label>
             <input
               id="edit-emp-email"
               type="email"
@@ -139,7 +141,7 @@ export function EditEmployeeModal({ isOpen, employee, onClose, onSuccess }: Read
 
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="edit-emp-code">Employee Code *</label>
+              <label htmlFor="edit-emp-code">{t.employees.employeeCode} *</label>
               <input
                 id="edit-emp-code"
                 type="text"
@@ -149,7 +151,7 @@ export function EditEmployeeModal({ isOpen, employee, onClose, onSuccess }: Read
               />
             </div>
             <div className="form-group">
-              <label htmlFor="edit-emp-phone">Phone Number</label>
+              <label htmlFor="edit-emp-phone">{t.employees.phone}</label>
               <input
                 id="edit-emp-phone"
                 type="text"
@@ -161,7 +163,7 @@ export function EditEmployeeModal({ isOpen, employee, onClose, onSuccess }: Read
 
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="edit-emp-dept">Department *</label>
+              <label htmlFor="edit-emp-dept">{t.employees.department} *</label>
               <input
                 id="edit-emp-dept"
                 type="text"
@@ -171,7 +173,7 @@ export function EditEmployeeModal({ isOpen, employee, onClose, onSuccess }: Read
               />
             </div>
             <div className="form-group">
-              <label htmlFor="edit-emp-pos">Position *</label>
+              <label htmlFor="edit-emp-pos">{t.employees.position} *</label>
               <input
                 id="edit-emp-pos"
                 type="text"
@@ -184,7 +186,7 @@ export function EditEmployeeModal({ isOpen, employee, onClose, onSuccess }: Read
 
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="edit-emp-date">Joining Date *</label>
+              <label htmlFor="edit-emp-date">{t.employees.joiningDate} *</label>
               <input
                 id="edit-emp-date"
                 type="date"
@@ -194,29 +196,29 @@ export function EditEmployeeModal({ isOpen, employee, onClose, onSuccess }: Read
               />
             </div>
             <div className="form-group">
-              <label htmlFor="edit-emp-status">Status *</label>
+              <label htmlFor="edit-emp-status">{t.employees.colStatus} *</label>
               <select
                 id="edit-emp-status"
                 value={status}
                 onChange={(e) => setStatus(e.target.value as "ACTIVE" | "INACTIVE")}
               >
-                <option value="ACTIVE">ACTIVE</option>
-                <option value="INACTIVE">INACTIVE</option>
+                <option value="ACTIVE">{t.statuses.active}</option>
+                <option value="INACTIVE">{t.statuses.inactive}</option>
               </select>
             </div>
           </div>
 
           <div className="modal-actions">
             <button type="button" className="secondary-button" onClick={onClose} disabled={submitting}>
-              Cancel
+              {t.actions.cancel}
             </button>
             <button type="submit" className="primary-button" disabled={submitting}>
               {submitting ? (
                 <>
-                  <Loader2 className="loading-spinner" size={14} /> Saving...
+                  <Loader2 className="loading-spinner" size={14} /> {t.actions.saving}
                 </>
               ) : (
-                "Save changes"
+                t.actions.save
               )}
             </button>
           </div>

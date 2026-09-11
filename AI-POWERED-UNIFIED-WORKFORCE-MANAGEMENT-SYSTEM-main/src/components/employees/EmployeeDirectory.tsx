@@ -5,6 +5,7 @@ import { Building2, Eye, Loader2, MoreHorizontal, Pencil, Plus, Search, Trash2, 
 
 import { AddEmployeeModal } from "@/components/dashboard/AddEmployeeModal";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { useI18n } from "@/lib/i18n/I18nProvider";
 import { EditEmployeeModal, EmployeeEditRow } from "./EditEmployeeModal";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 
@@ -51,6 +52,7 @@ function normalizeEmployee(row: Partial<EmployeeRow>): EmployeeRow {
 }
 
 export function EmployeeDirectory() {
+  const { t, formatDate } = useI18n();
   const { role } = useAuth();
   const canManageEmployees = role === "ADMIN" || role === "HR";
 
@@ -249,13 +251,13 @@ export function EmployeeDirectory() {
       {/* Header */}
       <div className="protected-page-heading">
         <div>
-          <p className="eyebrow">Workforce</p>
-          <h1>Employees</h1>
-          <p className="muted">People directory for the current workforce and hiring operations.</p>
+          <p className="eyebrow">{t.employees.eyebrow}</p>
+          <h1>{t.employees.title}</h1>
+          <p className="muted">{t.employees.subtitle}</p>
         </div>
         {canManageEmployees ? (
           <button type="button" className="primary-button" onClick={() => setIsAddModalOpen(true)}>
-            <Plus size={15} /> Add Employee
+            <Plus size={15} /> {t.employees.addEmployee}
           </button>
         ) : null}
       </div>
@@ -264,16 +266,16 @@ export function EmployeeDirectory() {
       <div className="employees-toolbar">
         <div className="employees-count">
           <span>{filteredEmployees.length}</span>
-          <small>employees</small>
+          <small>{t.employees.countLabel}</small>
         </div>
 
-        <label className="employees-search" aria-label="Search employees">
+        <label className="employees-search" aria-label={t.employees.searchPlaceholder}>
           <Search size={15} />
           <input
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search employees by name, email, department, code..."
+            placeholder={t.employees.searchPlaceholder}
           />
         </label>
       </div>
@@ -282,34 +284,34 @@ export function EmployeeDirectory() {
       {error ? (
         <div className="panel empty-state">
           <UserRound size={24} />
-          <p>{error || "Unable to load employees."}</p>
+          <p>{error || t.employees.loadError}</p>
           <button type="button" className="secondary-button" onClick={() => void fetchEmployees()}>
-            Retry
+            {t.actions.retry}
           </button>
         </div>
       ) : loading ? (
         <div className="panel empty-state">
           <Loader2 className="loading-spinner" size={24} />
-          <span>Loading employees...</span>
+          <span>{t.actions.loading}</span>
         </div>
       ) : employees.length === 0 ? (
         <div className="panel empty-state">
           <UserRound size={28} />
-          <p style={{ fontWeight: 600, fontSize: 16, color: "var(--ink)" }}>No employees yet</p>
-          <p style={{ margin: "4px 0 16px" }}>There are no employees registered in the workforce yet.</p>
+          <p style={{ fontWeight: 600, fontSize: 16, color: "var(--ink)" }}>{t.employees.emptyNoRecords}</p>
+          <p style={{ margin: "4px 0 16px" }}>{t.employees.emptyNoRecordsDesc}</p>
           {canManageEmployees ? (
             <button type="button" className="primary-button" onClick={() => setIsAddModalOpen(true)}>
-              <Plus size={15} /> Add Employee
+              <Plus size={15} /> {t.employees.addEmployee}
             </button>
           ) : null}
         </div>
       ) : filteredEmployees.length === 0 ? (
         <div className="panel empty-state">
           <Search size={24} />
-          <p style={{ fontWeight: 600, fontSize: 15, color: "var(--ink)" }}>No employees match your search.</p>
-          <p style={{ margin: "4px 0 16px" }}>No employee record matches &quot;{search}&quot;.</p>
+          <p style={{ fontWeight: 600, fontSize: 15, color: "var(--ink)" }}>{t.employees.emptyNoMatch}</p>
+          <p style={{ margin: "4px 0 16px" }}>{t.employees.emptyNoMatchDesc}</p>
           <button type="button" className="secondary-button" onClick={() => setSearch("")}>
-            Clear search
+            {t.employees.clearSearch}
           </button>
         </div>
       ) : (
@@ -317,11 +319,11 @@ export function EmployeeDirectory() {
           {/* Employee Table List */}
           <div className="panel table-panel">
             <div className="table-header">
-              <span>Employee</span>
-              <span>Department</span>
-              <span>Position</span>
-              <span>Status</span>
-              <span style={{ textAlign: "right" }}>Actions</span>
+              <span>{t.employees.colEmployee}</span>
+              <span>{t.employees.colDepartment}</span>
+              <span>{t.employees.colPosition}</span>
+              <span>{t.employees.colStatus}</span>
+              <span style={{ textAlign: "right" }}>{t.employees.colActions}</span>
             </div>
             <div className="table-body">
               {filteredEmployees.map((employee) => {
@@ -350,15 +352,15 @@ export function EmployeeDirectory() {
                     <div className="cell-person">
                       <div className="avatar avatar-person">{initials}</div>
                       <div>
-                        <strong>{employee.full_name || "Unnamed employee"}</strong>
-                        <span>{employee.email || "No email on file"}</span>
+                        <strong>{employee.full_name || "—"}</strong>
+                        <span>{employee.email || "—"}</span>
                       </div>
                     </div>
                     <span>{employee.department}</span>
                     <span>{employee.position}</span>
                     <div>
                       <span className={`status-chip ${employee.status === "ACTIVE" ? "active" : "on_leave"}`}>
-                        {employee.status}
+                        {employee.status === "ACTIVE" ? t.statuses.active : t.statuses.inactive}
                       </span>
                     </div>
                     <div className="cell-actions" onClick={(e) => e.stopPropagation()}>
@@ -366,7 +368,7 @@ export function EmployeeDirectory() {
                         type="button"
                         className="action-menu-trigger"
                         onClick={() => setActiveMenuId(activeMenuId === employee.id ? null : employee.id)}
-                        aria-label={`Actions for ${employee.full_name || "employee"}`}
+                        aria-label={t.employees.colActions}
                         aria-expanded={activeMenuId === employee.id}
                       >
                         <MoreHorizontal size={18} />
@@ -382,7 +384,7 @@ export function EmployeeDirectory() {
                               void openEmployeeDetail(employee.id);
                             }}
                           >
-                            <Eye size={14} /> View details
+                            <Eye size={14} /> {t.actions.viewDetails}
                           </button>
                           {canManageEmployees && (
                             <>
@@ -394,7 +396,7 @@ export function EmployeeDirectory() {
                                   setEditingEmployee(employee);
                                 }}
                               >
-                                <Pencil size={14} /> Edit
+                                <Pencil size={14} /> {t.actions.edit}
                               </button>
                               <button
                                 type="button"
@@ -404,7 +406,7 @@ export function EmployeeDirectory() {
                                   setDeletingEmployee(employee);
                                 }}
                               >
-                                <Trash2 size={14} /> Delete
+                                <Trash2 size={14} /> {t.actions.delete}
                               </button>
                             </>
                           )}
@@ -422,7 +424,7 @@ export function EmployeeDirectory() {
             {detailLoading ? (
               <div className="empty-state">
                 <Loader2 className="loading-spinner" size={20} />
-                <span>Loading employee details...</span>
+                <span>{t.actions.loading}</span>
               </div>
             ) : selectedEmployee ? (
               <>
@@ -437,8 +439,8 @@ export function EmployeeDirectory() {
                         .toUpperCase()}
                     </div>
                     <div>
-                      <h2>{selectedEmployee.full_name || "Unnamed employee"}</h2>
-                      <p>{selectedEmployee.email || "No email on file"}</p>
+                      <h2>{selectedEmployee.full_name || "—"}</h2>
+                      <p>{selectedEmployee.email || "—"}</p>
                     </div>
                   </div>
                 </div>
@@ -448,32 +450,32 @@ export function EmployeeDirectory() {
 
                   <div className="info-grid">
                     <div className="info-item">
-                      <label>Employee Code</label>
+                      <label>{t.employees.employeeCode}</label>
                       <span>{selectedEmployee.employee_code}</span>
                     </div>
                     <div className="info-item">
-                      <label>Status</label>
+                      <label>{t.employees.colStatus}</label>
                       <span>
                         <span className={`status-chip ${selectedEmployee.status === "ACTIVE" ? "active" : "on_leave"}`}>
-                          {selectedEmployee.status}
+                          {selectedEmployee.status === "ACTIVE" ? t.statuses.active : t.statuses.inactive}
                         </span>
                       </span>
                     </div>
                     <div className="info-item">
-                      <label>Department</label>
+                      <label>{t.employees.department}</label>
                       <span>{selectedEmployee.department}</span>
                     </div>
                     <div className="info-item">
-                      <label>Position</label>
+                      <label>{t.employees.position}</label>
                       <span>{selectedEmployee.position}</span>
                     </div>
                     <div className="info-item">
-                      <label>Phone Number</label>
-                      <span>{selectedEmployee.phone || "Not provided"}</span>
+                      <label>{t.employees.phone}</label>
+                      <span>{selectedEmployee.phone || "—"}</span>
                     </div>
                     <div className="info-item">
-                      <label>Joining Date</label>
-                      <span>{selectedEmployee.joining_date}</span>
+                      <label>{t.employees.joiningDate}</label>
+                      <span>{formatDate(selectedEmployee.joining_date)}</span>
                     </div>
                   </div>
 
@@ -484,14 +486,14 @@ export function EmployeeDirectory() {
                         className="secondary-button"
                         onClick={() => setEditingEmployee(selectedEmployee)}
                       >
-                        <Pencil size={14} /> Edit
+                        <Pencil size={14} /> {t.actions.edit}
                       </button>
                       <button
                         type="button"
                         className="danger-button"
                         onClick={() => setDeletingEmployee(selectedEmployee)}
                       >
-                        <Trash2 size={14} /> Delete
+                        <Trash2 size={14} /> {t.actions.delete}
                       </button>
                     </div>
                   )}
@@ -500,7 +502,7 @@ export function EmployeeDirectory() {
             ) : (
               <div className="empty-state">
                 <Building2 size={24} />
-                <p>Select an employee from the directory to view details.</p>
+                <p>{t.actions.noData}</p>
               </div>
             )}
           </div>

@@ -1,10 +1,10 @@
-﻿"use client";
+"use client";
 
 import { FormEvent, useEffect, useState } from "react";
 import { Loader2, X } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useI18n } from "@/lib/i18n/I18nProvider";
-import { TaskStatus, STATUS_LABELS } from "./CreateTaskModal";
+import { TaskStatus } from "./CreateTaskModal";
 
 export type TaskEditRow = {
   id: string;
@@ -120,39 +120,39 @@ export function EditTaskModal({ isOpen, task, onClose, onSuccess }: Readonly<Pro
     <div className="modal-overlay" onClick={onClose} role="presentation">
       <div className="modal-container" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
         <div className="modal-header">
-          <h2>{t.actions.edit} Task</h2>
-          <button type="button" className="icon-button" onClick={onClose} aria-label="Close"><X size={18} /></button>
+          <h2>{t.workflows.editModalTitle}</h2>
+          <button type="button" className="icon-button" onClick={onClose} aria-label={t.actions.cancel}><X size={18} /></button>
         </div>
         {error && <div className="auth-error" style={{ marginBottom: 16 }}>{error}</div>}
         <form onSubmit={handleSubmit} className="modal-form">
           <div className="form-group">
-            <label htmlFor="edit-task-title">Title *</label>
+            <label htmlFor="edit-task-title">{t.workflows.titleLabel} *</label>
             <input id="edit-task-title" type="text" required value={title} onChange={(e) => setTitle(e.target.value)} />
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="edit-task-status">Status</label>
+              <label htmlFor="edit-task-status">{t.workflows.statusLabel}</label>
               <select id="edit-task-status" value={status} onChange={(e) => setStatus(e.target.value as TaskStatus)}>
-                {(Object.keys(STATUS_LABELS) as TaskStatus[]).map((v) => (
-                  <option key={v} value={v}>{STATUS_LABELS[v]}</option>
-                ))}
+                <option value="TODO">{t.statuses.todo}</option>
+                <option value="IN_PROGRESS">{t.statuses.inProgress}</option>
+                <option value="COMPLETED">{t.statuses.completed}</option>
               </select>
             </div>
             <div className="form-group">
-              <label htmlFor="edit-task-due">Due Date</label>
+              <label htmlFor="edit-task-due">{t.workflows.dueDateLabel}</label>
               <input id="edit-task-due" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
             </div>
           </div>
           {canEditAll && (
             <div className="form-group">
-              <label htmlFor="edit-task-assignee">Assign To</label>
+              <label htmlFor="edit-task-assignee">{t.workflows.assignedToLabel}</label>
               {loadingProfiles ? (
                 <div style={{ display: "flex", alignItems: "center", gap: 8, padding: 8, fontSize: 13, color: "var(--muted)" }}>
-                  <Loader2 className="loading-spinner" size={14} /> Loading profiles...
+                  <Loader2 className="loading-spinner" size={14} /> {t.actions.loading}
                 </div>
               ) : (
                 <select id="edit-task-assignee" value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)}>
-                  <option value="">Unassigned</option>
+                  <option value="">{t.workflows.unassigned}</option>
                   {profiles.map((p) => (
                     <option key={p.id} value={p.id}>{p.full_name}{p.department ? ` — ${p.department}` : ""}</option>
                   ))}
@@ -161,7 +161,7 @@ export function EditTaskModal({ isOpen, task, onClose, onSuccess }: Readonly<Pro
             </div>
           )}
           <div className="form-group">
-            <label htmlFor="edit-task-desc">Description</label>
+            <label htmlFor="edit-task-desc">{t.workflows.descriptionLabel}</label>
             <textarea id="edit-task-desc" rows={4} value={description} onChange={(e) => setDescription(e.target.value)} />
           </div>
           <div className="modal-actions">

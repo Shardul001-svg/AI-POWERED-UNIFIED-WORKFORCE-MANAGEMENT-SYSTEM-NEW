@@ -8,7 +8,6 @@ export const protectedNavigation = [
   { label: "Requests", href: "/requests", icon: "inbox", roles: ["ADMIN", "HR"] },
   { label: "My requests", href: "/requests", icon: "clipboard-list", roles: ["EMPLOYEE"] },
   { label: "Workflows", href: "/workflows", icon: "workflow", roles: ["ADMIN", "HR"] },
-  { label: "AI Assistant", href: "/chat", icon: "sparkles", roles: ["ADMIN", "HR", "EMPLOYEE", "CANDIDATE"] },
   { label: "Notifications", href: "/notifications", icon: "bell", roles: ["ADMIN", "HR", "EMPLOYEE", "CANDIDATE"] },
   { label: "Settings", href: "/settings", icon: "settings", roles: ["ADMIN", "HR", "EMPLOYEE", "CANDIDATE"] },
 ] as const;

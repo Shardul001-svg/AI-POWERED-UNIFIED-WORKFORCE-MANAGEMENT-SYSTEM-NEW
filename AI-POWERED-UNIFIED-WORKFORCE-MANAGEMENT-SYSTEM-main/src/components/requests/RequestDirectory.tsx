@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -29,11 +29,14 @@ type RequestRow = {
   employee_position?: string | null;
 };
 
-function formatDate(value: string) {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(date);
+function getLocalizedType(type: RequestType, t: ReturnType<typeof useI18n>["t"]) {
+  switch (type) {
+    case "LEAVE": return t.requests.typeLeave;
+    case "HR_QUERY": return t.requests.typeHrQuery;
+    case "DOCUMENT": return t.requests.typeDocument;
+    case "OTHER": return t.requests.typeOther;
+    default: return type;
+  }
 }
 
 function getStatusLabel(status: RequestStatus, t: ReturnType<typeof useI18n>["t"]) {
@@ -62,7 +65,7 @@ function getInitials(name: string | null | undefined) {
 }
 
 export function RequestDirectory() {
-  const { t } = useI18n();
+  const { t, formatDate } = useI18n();
   const { role } = useAuth();
   const canManageRequests = role === "ADMIN" || role === "HR";
   const directoryRef = useRef<HTMLDivElement>(null);
@@ -213,12 +216,12 @@ export function RequestDirectory() {
       {/* Header */}
       <div className="protected-page-heading">
         <div>
-          <p className="eyebrow">Operations</p>
-          <h1>{t.pages.requestsTitle}</h1>
-          <p className="muted">{t.pages.requestsSubtitle}</p>
+          <p className="eyebrow">{t.requests.eyebrow}</p>
+          <h1>{t.requests.title}</h1>
+          <p className="muted">{t.requests.subtitle}</p>
         </div>
-        <button type="button" className="primary-button" onClick={() => setIsCreateModalOpen(true)}>
-          <Plus size={15} /> + Create Request
+        <button type="button" id="open-create-request-btn" className="primary-button" onClick={() => setIsCreateModalOpen(true)}>
+          <Plus size={15} /> + {t.requests.createRequest}
         </button>
       </div>
 
@@ -227,7 +230,7 @@ export function RequestDirectory() {
         <div className="metric-grid" style={{ gridTemplateColumns: "repeat(4, 1fr)", marginBottom: 20 }}>
           <div className="metric-card">
             <div className="metric-icon blue"><FileText size={16} /></div>
-            <span className="metric-label">Total Requests</span>
+            <span className="metric-label">{t.requests.title}</span>
             <strong>{metrics.total}</strong>
           </div>
           <div className="metric-card">
@@ -252,39 +255,39 @@ export function RequestDirectory() {
       <div className="employees-toolbar">
         <div className="employees-count">
           <span>{filteredRequests.length}</span>
-          <small>{t.nav.requests.toLowerCase()}</small>
+          <small>{t.requests.countLabel}</small>
         </div>
         <div style={{ display: "flex", gap: 10, alignItems: "center", flex: 1, justifyContent: "flex-end", flexWrap: "wrap" }}>
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
             style={{ background: "var(--input-bg)", border: "1px solid var(--input-border)", borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "var(--ink)", outline: "none" }}
-            aria-label="Filter by request type"
+            aria-label={t.requests.typeLabel}
           >
-            <option value="ALL">All Types</option>
+            <option value="ALL">{t.requests.allTypes}</option>
             {(Object.keys(TYPE_LABELS) as RequestType[]).map((v) => (
-              <option key={v} value={v}>{TYPE_LABELS[v]}</option>
+              <option key={v} value={v}>{getLocalizedType(v, t)}</option>
             ))}
           </select>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             style={{ background: "var(--input-bg)", border: "1px solid var(--input-border)", borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "var(--ink)", outline: "none" }}
-            aria-label="Filter by status"
+            aria-label={t.requests.statusLabel}
           >
-            <option value="ALL">All Statuses</option>
+            <option value="ALL">{t.requests.allStatuses}</option>
             <option value="PENDING">{t.statuses.pending}</option>
             <option value="APPROVED">{t.statuses.approved}</option>
             <option value="REJECTED">{t.statuses.rejected}</option>
             <option value="COMPLETED">{t.statuses.completed}</option>
           </select>
-          <label className="employees-search" style={{ maxWidth: 300 }} aria-label="Search requests">
+          <label className="employees-search" style={{ maxWidth: 300 }} aria-label={t.requests.searchPlaceholder}>
             <Search size={15} />
             <input
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search requests, employee, type..."
+              placeholder={t.requests.searchPlaceholder}
             />
           </label>
         </div>
@@ -294,7 +297,7 @@ export function RequestDirectory() {
       {error ? (
         <div className="panel empty-state">
           <FileText size={24} />
-          <p>{error || "Unable to load requests."}</p>
+          <p>{error || t.requests.loadError}</p>
           <button type="button" className="secondary-button" onClick={() => void fetchRequests()}>{t.actions.refresh}</button>
         </div>
       ) : loading ? (
@@ -305,29 +308,29 @@ export function RequestDirectory() {
       ) : requests.length === 0 ? (
         <div className="panel empty-state">
           <CalendarDays size={28} />
-          <p style={{ fontWeight: 600, fontSize: 16, color: "var(--ink)" }}>No requests yet</p>
-          <p style={{ margin: "4px 0 16px" }}>Create a request to start managing workforce needs.</p>
-          <button type="button" className="primary-button" onClick={() => setIsCreateModalOpen(true)}>
-            <Plus size={15} /> + Create Request
+          <p style={{ fontWeight: 600, fontSize: 16, color: "var(--ink)" }}>{t.requests.emptyNoRecords}</p>
+          <p style={{ margin: "4px 0 16px" }}>{t.requests.emptyNoRecordsDesc}</p>
+          <button type="button" id="empty-create-request-btn" className="primary-button" onClick={() => setIsCreateModalOpen(true)}>
+            <Plus size={15} /> + {t.requests.createRequest}
           </button>
         </div>
       ) : filteredRequests.length === 0 ? (
         <div className="panel empty-state">
           <Search size={24} />
-          <p style={{ fontWeight: 600, fontSize: 15, color: "var(--ink)" }}>No requests match your filters.</p>
-          <p style={{ margin: "4px 0 16px" }}>Try adjusting your search or filter criteria.</p>
-          <button type="button" className="secondary-button" onClick={clearFilters}>Clear filters</button>
+          <p style={{ fontWeight: 600, fontSize: 15, color: "var(--ink)" }}>{t.requests.emptyNoMatch}</p>
+          <p style={{ margin: "4px 0 16px" }}>{t.requests.emptyNoMatchDesc}</p>
+          <button type="button" className="secondary-button" onClick={clearFilters}>{t.employees.clearSearch}</button>
         </div>
       ) : (
         <div className="employees-layout">
           {/* Request Table */}
           <div className="panel table-panel requests-table">
             <div className="table-header">
-              <span>Request</span>
-              <span>Employee</span>
-              <span>Type</span>
-              <span>Status</span>
-              <span style={{ textAlign: "right" }}>Actions</span>
+              <span>{t.requests.colRequest}</span>
+              <span>{t.requests.colEmployee}</span>
+              <span>{t.requests.colType}</span>
+              <span>{t.requests.colStatus}</span>
+              <span style={{ textAlign: "right" }}>{t.requests.colActions}</span>
             </div>
             <div className="table-body">
               {filteredRequests.map((request) => {
@@ -356,7 +359,7 @@ export function RequestDirectory() {
                     </div>
                     <div>
                       <span className={`status-chip req-type-${request.type.toLowerCase().replace("_", "-")}`}>
-                        {TYPE_LABELS[request.type]}
+                        {getLocalizedType(request.type, t)}
                       </span>
                     </div>
                     <div>
@@ -449,23 +452,23 @@ export function RequestDirectory() {
                   {detailError && <div className="auth-error" style={{ marginBottom: 16 }}>{detailError}</div>}
                   <div className="info-grid">
                     <div className="info-item">
-                      <label>Employee</label>
+                      <label>{t.requests.employeeLabel}</label>
                       <span>{selectedRequest.employee_name || "—"}</span>
                     </div>
                     <div className="info-item">
-                      <label>Department</label>
+                      <label>{t.employees.department}</label>
                       <span>{selectedRequest.employee_department || "—"}</span>
                     </div>
                     <div className="info-item">
-                      <label>Request Type</label>
+                      <label>{t.requests.typeLabel}</label>
                       <span>
                         <span className={`status-chip req-type-${selectedRequest.type.toLowerCase().replace("_", "-")}`}>
-                          {TYPE_LABELS[selectedRequest.type]}
+                          {getLocalizedType(selectedRequest.type, t)}
                         </span>
                       </span>
                     </div>
                     <div className="info-item">
-                      <label>Status</label>
+                      <label>{t.requests.statusLabel}</label>
                       <span>
                         <span className={`status-chip ${getStatusClass(selectedRequest.status)}`}>
                           {getStatusLabel(selectedRequest.status, t)}
@@ -473,16 +476,16 @@ export function RequestDirectory() {
                       </span>
                     </div>
                     <div className="info-item">
-                      <label>Created</label>
+                      <label>{t.requests.colCreated}</label>
                       <span>{formatDate(selectedRequest.created_at)}</span>
                     </div>
                     <div className="info-item">
-                      <label>Last Updated</label>
+                      <label>{t.employees.joiningDate}</label>
                       <span>{formatDate(selectedRequest.updated_at)}</span>
                     </div>
                     <div className="info-item" style={{ gridColumn: "1 / -1" }}>
-                      <label>Description</label>
-                      <span>{selectedRequest.description || "No description provided."}</span>
+                      <label>{t.requests.descriptionLabel}</label>
+                      <span>{selectedRequest.description || t.interviews.noNotes}</span>
                     </div>
                   </div>
 
@@ -496,7 +499,7 @@ export function RequestDirectory() {
                         status: selectedRequest.status, employee_name: selectedRequest.employee_name,
                       })}
                     >
-                      <Pencil size={14} /> {t.actions.edit}
+                      <Pencil size={14} /> {t.requests.editRequest}
                     </button>
                     {canManageRequests && (
                       <button
@@ -508,7 +511,7 @@ export function RequestDirectory() {
                           status: selectedRequest.status, employee_name: selectedRequest.employee_name,
                         })}
                       >
-                        <Trash2 size={14} /> {t.actions.delete}
+                        <Trash2 size={14} /> {t.requests.deleteRequest}
                       </button>
                     )}
                   </div>
@@ -517,7 +520,7 @@ export function RequestDirectory() {
             ) : (
               <div className="empty-state">
                 <FileText size={24} />
-                <p>Select a request from the list to view details.</p>
+                <p>{t.requests.emptyNoRecordsDesc}</p>
               </div>
             )}
           </div>

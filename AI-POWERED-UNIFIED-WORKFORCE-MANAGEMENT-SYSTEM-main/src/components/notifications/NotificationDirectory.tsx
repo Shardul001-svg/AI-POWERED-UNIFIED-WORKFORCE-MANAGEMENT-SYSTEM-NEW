@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Bell, CheckCheck, CircleDashed, ExternalLink, Loader2, RefreshCw, Search, Trash2, Wifi } from "lucide-react";
+import { Bell, CheckCheck, ExternalLink, Loader2, RefreshCw, Search, Trash2, Wifi } from "lucide-react";
 
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useNotificationRealtime, type NotificationRealtimePayload, type RealtimeStatus } from "@/components/notifications/useNotificationRealtime";
@@ -32,40 +32,30 @@ function dedupeNotifications(rows: NotificationRow[]) {
   return sortNotifications(Array.from(deduped.values()));
 }
 
-function formatNotificationDate(value: string) {
-  if (!value) {
-    return "—";
-  }
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(date);
-}
-
-function getNotificationLink(type: string): { href: string; label: string } | null {
+function getNotificationLink(type: string, t: ReturnType<typeof useI18n>["t"]): { href: string; label: string } | null {
   const normalized = (type || "").toLowerCase().trim();
   switch (normalized) {
     case "request":
-      return { href: "/requests", label: "View Requests" };
+    case "requests":
+      return { href: "/requests", label: t.notifications.viewRequests };
     case "task":
-      return { href: "/tasks", label: "View Tasks" };
+    case "tasks":
+    case "workflow":
+    case "workflows":
+      return { href: "/workflows", label: t.notifications.viewTasks };
     case "interview":
-      return { href: "/interviews", label: "View Interviews" };
+    case "interviews":
+      return { href: "/interviews", label: t.notifications.viewInterviews };
     case "employee":
-      return { href: "/employees", label: "View Employees" };
+    case "employees":
+      return { href: "/employees", label: t.notifications.viewEmployees };
     case "candidate":
-      return { href: "/candidates", label: "View Candidates" };
+    case "candidates":
+      return { href: "/candidates", label: t.notifications.viewCandidates };
     case "schedule":
-      return { href: "/schedules", label: "View Schedule" };
+    case "schedules":
+      return { href: "/interviews", label: t.notifications.viewSchedule };
     default:
       return null;
   }
@@ -73,7 +63,7 @@ function getNotificationLink(type: string): { href: string; label: string } | nu
 
 export function NotificationDirectory() {
   const { user } = useAuth();
-  const { t } = useI18n();
+  const { t, formatDate } = useI18n();
   const [notifications, setNotifications] = useState<NotificationRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -372,7 +362,7 @@ export function NotificationDirectory() {
         <div>
           <p className="eyebrow">{t.nav.workspace}</p>
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-            <h1>{t.pages.notificationsTitle}</h1>
+            <h1>{t.notifications.title}</h1>
             <span
               style={{
                 display: "inline-flex",
@@ -398,23 +388,23 @@ export function NotificationDirectory() {
             >
               <Wifi size={12} />
               {realtimeStatus === "SUBSCRIBED"
-                ? "Realtime active"
+                ? t.notifications.realtimeActive
                 : realtimeStatus === "CONNECTING"
                   ? `${t.actions.loading}`
-                  : "Disconnected"}
+                  : "Offline"}
             </span>
           </div>
-          <p className="muted">{t.pages.notificationsSubtitle}</p>
+          <p className="muted">{t.notifications.subtitle}</p>
         </div>
         <div style={{ display: "flex", gap: "0.5rem" }}>
           <button
             type="button"
             className="secondary-button"
             onClick={() => void refreshNotifications()}
-            title={t.actions.refresh}
+            title={t.notifications.refresh}
           >
             <RefreshCw size={15} />
-            {t.actions.refresh}
+            {t.notifications.refresh}
           </button>
           <button
             type="button"
@@ -423,7 +413,7 @@ export function NotificationDirectory() {
             disabled={markingAll || unreadCount === 0}
           >
             <CheckCheck size={15} />
-            {markingAll ? t.actions.saving : t.actions.markAllRead}
+            {markingAll ? t.actions.saving : t.notifications.markAllRead}
           </button>
         </div>
       </div>
@@ -432,10 +422,10 @@ export function NotificationDirectory() {
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
           <div className="employees-count">
             <span>{notifications.length}</span>
-            <small>{t.actions.all}</small>
+            <small>{t.notifications.filterAll}</small>
           </div>
           <div className="status-pill active" style={{ fontSize: "0.825rem", padding: "0.3rem 0.75rem" }}>
-            {unreadCount} {t.actions.unread}
+            {unreadCount} {t.notifications.filterUnread}
           </div>
         </div>
 
@@ -447,7 +437,7 @@ export function NotificationDirectory() {
               onClick={() => setFilter("all")}
               style={{ fontSize: "0.8rem", padding: "0.25rem 0.6rem", height: "auto" }}
             >
-              {t.actions.all} ({notifications.length})
+              {t.notifications.filterAll} ({notifications.length})
             </button>
             <button
               type="button"
@@ -455,7 +445,7 @@ export function NotificationDirectory() {
               onClick={() => setFilter("unread")}
               style={{ fontSize: "0.8rem", padding: "0.25rem 0.6rem", height: "auto" }}
             >
-              {t.actions.unread} ({unreadCount})
+              {t.notifications.filterUnread} ({unreadCount})
             </button>
             <button
               type="button"
@@ -463,18 +453,18 @@ export function NotificationDirectory() {
               onClick={() => setFilter("read")}
               style={{ fontSize: "0.8rem", padding: "0.25rem 0.6rem", height: "auto" }}
             >
-              {t.actions.read} ({notifications.length - unreadCount})
+              {t.notifications.filterRead} ({notifications.length - unreadCount})
             </button>
           </div>
 
           <div className="employees-search">
-            <label aria-label="Search notifications" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <label aria-label={t.notifications.searchPlaceholder} style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
               <Search size={15} />
               <input
                 type="search"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder={t.actions.search}
+                placeholder={t.notifications.searchPlaceholder}
               />
             </label>
           </div>
@@ -482,32 +472,60 @@ export function NotificationDirectory() {
       </div>
 
       {error ? (
-        <div className="panel panel-warning" style={{ marginBottom: "1rem" }}>
-          <p>{error}</p>
+        <div className="panel panel-warning" style={{ marginTop: "1rem", marginBottom: "1rem", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <p style={{ margin: 0 }}>{error}</p>
+          <button type="button" className="secondary-button" onClick={() => void refreshNotifications()}>
+            <RefreshCw size={14} /> Retry
+          </button>
         </div>
       ) : null}
 
       {loading ? (
-        <div className="panel empty-panel">
-          <Loader2 className="loading-spinner" size={18} />
-          <span>Loading real-time notifications...</span>
+        <div className="notification-content-area">
+          <div className="panel notification-loading-panel">
+            <Loader2 className="loading-spinner" size={24} />
+            <span className="loading-label">{t.actions.loading}</span>
+          </div>
         </div>
       ) : filteredNotifications.length === 0 ? (
-        <div className="panel empty-panel">
-          <CircleDashed size={18} />
-          <span>
-            {notifications.length === 0
-              ? "No notifications yet. New events will appear here in real-time."
-              : "No notifications match your current search or filter."}
-          </span>
+        <div className="notification-content-area">
+          <div className="panel notification-empty-panel">
+            <div className="notification-empty-badge">
+              {notifications.length === 0 ? <Bell size={30} /> : <Search size={26} />}
+            </div>
+            <h3>
+              {notifications.length === 0
+                ? t.notifications.emptyTitle
+                : t.notifications.emptyFiltered}
+            </h3>
+            <p>
+              {notifications.length === 0
+                ? t.notifications.emptySubtitle
+                : t.interviews.emptyNoMatchDesc}
+            </p>
+            {filter !== "all" || search ? (
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => {
+                  setFilter("all");
+                  setSearch("");
+                }}
+                style={{ marginTop: "0.5rem" }}
+              >
+                {t.employees.clearSearch}
+              </button>
+            ) : null}
+          </div>
         </div>
       ) : (
-        <div className="employees-layout">
+        <div className="notification-content-area">
+          <div className="employees-layout">
           <div className="panel table-panel">
             <div className="table-header">
-              <span>Notification</span>
-              <span>Type</span>
-              <span>Received</span>
+              <span>{t.notifications.title}</span>
+              <span>{t.requests.typeLabel}</span>
+              <span>{t.requests.colCreated}</span>
             </div>
             <div className="table-body">
               {filteredNotifications.map((notification) => (
@@ -548,7 +566,7 @@ export function NotificationDirectory() {
                       {notification.type}
                     </span>
                   </span>
-                  <span>{formatNotificationDate(notification.created_at)}</span>
+                  <span>{formatDate(notification.created_at)}</span>
                 </button>
               ))}
             </div>
@@ -559,7 +577,7 @@ export function NotificationDirectory() {
               <>
                 <div className="detail-header">
                   <div>
-                    <p className="eyebrow">Notification detail</p>
+                    <p className="eyebrow">{t.notifications.title}</p>
                     <h2>{selectedNotification.title}</h2>
                   </div>
                   <div style={{ display: "flex", gap: "0.5rem" }}>
@@ -572,17 +590,17 @@ export function NotificationDirectory() {
                       disabled={updatingId === selectedNotification.id}
                     >
                       {updatingId === selectedNotification.id
-                        ? "Updating..."
+                        ? t.actions.saving
                         : selectedNotification.is_read
-                          ? "Mark unread"
-                          : "Mark read"}
+                          ? t.notifications.markAsUnread
+                          : t.notifications.markAsRead}
                     </button>
                     <button
                       type="button"
                       className="secondary-button"
                       onClick={() => void handleDelete(selectedNotification.id)}
                       disabled={deletingId === selectedNotification.id}
-                      title="Delete notification"
+                      title={t.notifications.deleteNotification}
                       style={{ color: "#ef4444" }}
                     >
                       <Trash2 size={15} />
@@ -592,30 +610,30 @@ export function NotificationDirectory() {
 
                 <div className="employee-detail-grid">
                   <div className="detail-stat">
-                    <span className="detail-label">Type</span>
+                    <span className="detail-label">{t.requests.typeLabel}</span>
                     <strong>{selectedNotification.type}</strong>
                   </div>
                   <div className="detail-stat">
-                    <span className="detail-label">Status</span>
-                    <strong>{selectedNotification.is_read ? "Read" : "Unread"}</strong>
+                    <span className="detail-label">{t.requests.statusLabel}</span>
+                    <strong>{selectedNotification.is_read ? t.notifications.filterRead : t.notifications.filterUnread}</strong>
                   </div>
                   <div className="detail-stat">
-                    <span className="detail-label">Received</span>
-                    <strong>{formatNotificationDate(selectedNotification.created_at)}</strong>
+                    <span className="detail-label">{t.requests.colCreated}</span>
+                    <strong>{formatDate(selectedNotification.created_at)}</strong>
                   </div>
                 </div>
 
                 <div className="field-row" style={{ marginTop: "1rem" }}>
                   <label>
-                    Message
+                    {t.requests.descriptionLabel}
                     <textarea rows={6} value={selectedNotification.message} readOnly />
                   </label>
                 </div>
 
-                {getNotificationLink(selectedNotification.type) ? (
+                {getNotificationLink(selectedNotification.type, t) ? (
                   <div style={{ marginTop: "1.25rem" }}>
                     {(() => {
-                      const linkInfo = getNotificationLink(selectedNotification.type);
+                      const linkInfo = getNotificationLink(selectedNotification.type, t);
                       if (!linkInfo) return null;
                       return (
                         <Link
@@ -643,6 +661,7 @@ export function NotificationDirectory() {
               </div>
             )}
           </div>
+        </div>
         </div>
       )}
     </div>

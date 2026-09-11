@@ -41,7 +41,7 @@ export function AddEmployeeModal({ isOpen, onClose, onSuccess }: Readonly<Props>
     e.preventDefault();
 
     if (!fullName.trim() || !email.trim() || !employeeCode.trim() || !department.trim() || !position.trim()) {
-      setError("Please fill in all required fields.");
+      setError(t.validation.fillRequiredFields);
       return;
     }
 
@@ -67,26 +67,24 @@ export function AddEmployeeModal({ isOpen, onClose, onSuccess }: Readonly<Props>
       const payload = await res.json();
 
       if (!res.ok || !payload.success) {
-        throw new Error(payload.message || payload.error || "Failed to create employee");
+        throw new Error(payload.message || payload.error || t.employees.loadError);
       }
 
       onSuccess();
       onClose();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      setError(err instanceof Error ? err.message : t.errors.somethingWentWrong);
     } finally {
       setSubmitting(false);
     }
   };
 
-
-
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-container" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>+ {t.actions.add} Employee</h2>
-          <button type="button" className="icon-button" onClick={onClose} aria-label="Close">
+          <h2>{t.employees.addModalTitle}</h2>
+          <button type="button" className="icon-button" onClick={onClose} aria-label={t.actions.close}>
             <X size={18} />
           </button>
         </div>
@@ -95,7 +93,7 @@ export function AddEmployeeModal({ isOpen, onClose, onSuccess }: Readonly<Props>
 
         <form onSubmit={handleSubmit} className="modal-form">
           <div className="form-group">
-            <label htmlFor="emp-name">Full Name *</label>
+            <label htmlFor="emp-name">{t.employees.fullName} *</label>
             <input
               id="emp-name"
               type="text"
@@ -107,7 +105,7 @@ export function AddEmployeeModal({ isOpen, onClose, onSuccess }: Readonly<Props>
           </div>
 
           <div className="form-group">
-            <label htmlFor="emp-email">Email Address *</label>
+            <label htmlFor="emp-email">{t.employees.emailAddress} *</label>
             <input
               id="emp-email"
               type="email"
@@ -120,7 +118,7 @@ export function AddEmployeeModal({ isOpen, onClose, onSuccess }: Readonly<Props>
 
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="emp-code">Employee Code *</label>
+              <label htmlFor="emp-code">{t.employees.employeeCode} *</label>
               <input
                 id="emp-code"
                 type="text"
@@ -130,7 +128,7 @@ export function AddEmployeeModal({ isOpen, onClose, onSuccess }: Readonly<Props>
               />
             </div>
             <div className="form-group">
-              <label htmlFor="emp-phone">Phone Number</label>
+              <label htmlFor="emp-phone">{t.employees.phone}</label>
               <input
                 id="emp-phone"
                 type="text"
@@ -143,7 +141,7 @@ export function AddEmployeeModal({ isOpen, onClose, onSuccess }: Readonly<Props>
 
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="emp-dept">Department *</label>
+              <label htmlFor="emp-dept">{t.employees.department} *</label>
               <select id="emp-dept" value={department} onChange={(e) => setDepartment(e.target.value)}>
                 <option value="Customer Success">Customer Success</option>
                 <option value="Operations">Operations</option>
@@ -154,7 +152,7 @@ export function AddEmployeeModal({ isOpen, onClose, onSuccess }: Readonly<Props>
               </select>
             </div>
             <div className="form-group">
-              <label htmlFor="emp-pos">Position *</label>
+              <label htmlFor="emp-pos">{t.employees.position} *</label>
               <input
                 id="emp-pos"
                 type="text"
@@ -166,7 +164,7 @@ export function AddEmployeeModal({ isOpen, onClose, onSuccess }: Readonly<Props>
           </div>
 
           <div className="form-group">
-            <label htmlFor="emp-date">Joining Date *</label>
+            <label htmlFor="emp-date">{t.employees.joiningDate} *</label>
             <input
               id="emp-date"
               type="date"
@@ -181,7 +179,7 @@ export function AddEmployeeModal({ isOpen, onClose, onSuccess }: Readonly<Props>
               {t.actions.cancel}
             </button>
             <button type="submit" className="primary-button" disabled={submitting}>
-              {submitting ? t.actions.submitting : "+ Add Employee"}
+              {submitting ? t.actions.submitting : t.employees.addEmployee}
             </button>
           </div>
         </form>

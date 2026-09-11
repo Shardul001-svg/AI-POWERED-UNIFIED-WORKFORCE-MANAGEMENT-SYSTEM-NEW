@@ -65,6 +65,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     return apiError("Invalid request payload", 400);
   }
 
+  if (auth.role === "EMPLOYEE" && body.assigned_to !== undefined && body.assigned_to !== auth.profile.id) {
+    return apiError("Employees cannot reassign tasks to other users.", 403);
+  }
+
   const updates: Record<string, string | null> = {};
 
   if (body.title !== undefined) updates.title = String(body.title).trim();

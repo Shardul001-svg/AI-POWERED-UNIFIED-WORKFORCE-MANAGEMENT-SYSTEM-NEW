@@ -11,10 +11,16 @@ export async function GET() {
     return apiError("Authentication required", 401);
   }
 
-  const { data, error } = await auth.supabase
+  let query = auth.supabase
     .from("interviews")
     .select("*, candidates!candidate_id(full_name, email, position_applied), profiles!interviewer(full_name, email, role)")
     .order("interview_date", { ascending: true });
+
+  if (auth.role === "EMPLOYEE") {
+    query = query.eq("interviewer", auth.profile.id);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     return apiError("Failed to load interviews", 500);
