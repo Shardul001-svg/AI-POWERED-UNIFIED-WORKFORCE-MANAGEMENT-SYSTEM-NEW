@@ -409,6 +409,27 @@ a {
   background: var(--subtle-bg);
 }
 
+.protected-whatsapp-link {
+  align-items: center;
+  background: #25d366;
+  border: 0;
+  border-radius: 50%;
+  color: #fff;
+  cursor: pointer;
+  display: grid;
+  height: 40px;
+  justify-items: center;
+  place-items: center;
+  width: 40px;
+  transition: transform 180ms ease, background 180ms ease, box-shadow 180ms ease;
+  box-shadow: 0 10px 22px rgba(37, 211, 102, 0.22);
+}
+
+.protected-whatsapp-link:hover {
+  background: #1ebe5a;
+  transform: translateY(-2px);
+}
+
 .icon-button.notification i, .protected-notification i {
   background: var(--coral);
   border: 1.5px solid var(--card-bg);

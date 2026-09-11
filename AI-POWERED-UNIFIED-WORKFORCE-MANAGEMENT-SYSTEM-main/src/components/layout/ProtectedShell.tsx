@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, ChevronDown, LogOut, Settings } from "lucide-react";
+import { Bell, ChevronDown, LogOut, MessageCircle, Settings } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
@@ -142,7 +142,7 @@ export function ProtectedShell({ children }: Readonly<{ children: React.ReactNod
         <div className="protected-brand">
           <span>W</span>
           <strong>
-            workforce<span>OS</span>
+            Apex<span>Estate</span>
           </strong>
         </div>
         <div className="workspace-switcher-wrap">
@@ -203,6 +203,15 @@ export function ProtectedShell({ children }: Readonly<{ children: React.ReactNod
             <strong>{currentNavLabel}</strong>
           </div>
           <div className="protected-top-actions">
+            <a
+              className="protected-whatsapp-link"
+              href="https://wa.me/917058940814?text=Hello%20Apex%2C%20I%20need%20help%20with%20real%20estate%20property%20details%20and%20booking."
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Open WhatsApp support"
+            >
+              <MessageCircle size={18} />
+            </a>
             <button
               type="button"
               className="protected-notification"
