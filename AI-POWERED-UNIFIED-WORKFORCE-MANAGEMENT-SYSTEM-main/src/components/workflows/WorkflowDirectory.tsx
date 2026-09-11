@@ -1,17 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { CircleDashed, Loader2, Pencil, Plus, Search, Trash2, UserRound } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  CalendarClock, CalendarDays, CheckCircle2,
+  CircleDashed, Eye, Loader2, MoreHorizontal,
+  Pencil, Plus, Search, Timer, Trash2,
+} from "lucide-react";
 
-import { useAuth } from "@/lib/auth/AuthProvider";
-
-type TaskStatus = "TODO" | "IN_PROGRESS" | "COMPLETED";
-
-type AssigneeOption = {
-  id: string;
-  full_name: string;
-  email: string;
-};
+import { useI18n } from "@/lib/i18n/I18nProvider";
+import { CreateTaskModal, TaskStatus, STATUS_LABELS } from "./CreateTaskModal";
+import { EditTaskModal, TaskEditRow } from "./EditTaskModal";
+import { DeleteTaskModal } from "./DeleteTaskModal";
 
 type TaskRow = {
   id: string;
@@ -28,608 +27,443 @@ type TaskRow = {
   assignee_role?: string | null;
 };
 
-type TaskFormState = {
-  title: string;
-  description: string;
-  assigned_to: string;
-  status: TaskStatus;
-  due_date: string;
-  related_type: string;
-  related_id: string;
-};
-
-const taskStatusOptions: TaskStatus[] = ["TODO", "IN_PROGRESS", "COMPLETED"];
-
-const emptyForm: TaskFormState = {
-  title: "",
-  description: "",
-  assigned_to: "",
-  status: "TODO",
-  due_date: "",
-  related_type: "",
-  related_id: "",
-};
-
 function formatDate(value: string | null) {
-  if (!value) {
-    return "—";
-  }
+  if (!value) return "—";
+  const date = new Date(value + (value.includes("T") ? "" : "T00:00:00"));
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(date);
+}
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
+function getDueDateStatus(value: string | null): "overdue" | "today" | "upcoming" | null {
+  if (!value) return null;
+  const now = new Date();
+  const due = new Date(value + "T00:00:00");
+  if (Number.isNaN(due.getTime())) return null;
+  const diffDays = Math.floor((due.getTime() - now.setHours(0, 0, 0, 0)) / 86400000);
+  if (diffDays < 0) return "overdue";
+  if (diffDays === 0) return "today";
+  return "upcoming";
+}
 
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(date);
+function getStatusClass(status: TaskStatus) {
+  switch (status) {
+    case "TODO": return "todo";
+    case "IN_PROGRESS": return "in-progress";
+    case "COMPLETED": return "completed";
+    default: return "";
+  }
+}
+
+function getInitials(name: string | null | undefined) {
+  if (!name) return "T";
+  return name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase();
 }
 
 export function WorkflowDirectory() {
-  const { role, profile } = useAuth();
-  const canManageTasks = role === "ADMIN" || role === "HR" || role === "EMPLOYEE";
+  const { t } = useI18n();
+
+  const directoryRef = useRef<HTMLDivElement>(null);
 
   const [tasks, setTasks] = useState<TaskRow[]>([]);
-  const [assigneeOptions, setAssigneeOptions] = useState<AssigneeOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"ALL" | TaskStatus>("ALL");
-  const [assigneeFilter, setAssigneeFilter] = useState("ALL");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<TaskRow | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
-  const [formState, setFormState] = useState<TaskFormState>(emptyForm);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
+
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [editingTask, setEditingTask] = useState<TaskEditRow | null>(null);
+  const [deletingTask, setDeletingTask] = useState<TaskEditRow | null>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (directoryRef.current && !directoryRef.current.contains(event.target as Node)) {
+        setActiveMenuId(null);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setActiveMenuId(null);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
   const fetchTasks = async () => {
-    setLoading(true);
-    setError(null);
-
+    setLoading(true); setError(null);
     try {
-      const response = await fetch("/api/tasks", { cache: "no-store" });
-      const payload = await response.json();
-
-      if (!response.ok || !payload.success) {
-        throw new Error(payload.message ?? "Unable to load tasks.");
-      }
-
-      setTasks(Array.isArray(payload.data) ? payload.data : []);
-    } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Unable to load tasks.");
+      const res = await fetch("/api/tasks", { cache: "no-store" });
+      const payload = await res.json();
+      if (!res.ok || !payload.success) throw new Error(payload.message ?? t.actions.error);
+      const rows: TaskRow[] = Array.isArray(payload.data) ? payload.data : [];
+      setTasks(rows);
+      if (rows.length > 0) {
+        setSelectedTaskId((prev) => {
+          const match = rows.find((r) => r.id === prev);
+          if (match) { setSelectedTask(match); return match.id; }
+          setSelectedTask(rows[0]); return rows[0].id;
+        });
+      } else { setSelectedTaskId(null); setSelectedTask(null); }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t.actions.error);
       setTasks([]);
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   useEffect(() => {
     let active = true;
-
     const load = async () => {
-      if (!active) {
-        return;
-      }
-
+      if (!active) return;
+      setLoading(true); setError(null);
       try {
-        const [tasksResponse, employeeResponse] = await Promise.all([
-          fetch("/api/tasks", { cache: "no-store" }),
-          fetch("/api/employees", { cache: "no-store" }),
-        ]);
-
-        const taskPayload = await tasksResponse.json();
-        const employeePayload = employeeResponse.ok ? await employeeResponse.json() : null;
-
-        if (!active) {
-          return;
+        const res = await fetch("/api/tasks", { cache: "no-store" });
+        const payload = await res.json();
+        if (!active) return;
+        if (!res.ok || !payload.success) throw new Error(payload.message ?? t.actions.error);
+        const rows: TaskRow[] = Array.isArray(payload.data) ? payload.data : [];
+        setTasks(rows);
+        if (rows.length > 0) {
+          setSelectedTask(rows[0]); setSelectedTaskId(rows[0].id);
         }
-
-        if (!tasksResponse.ok || !taskPayload.success) {
-          throw new Error(taskPayload.message ?? "Unable to load tasks.");
-        }
-
-        setTasks(Array.isArray(taskPayload.data) ? taskPayload.data : []);
-
-        const nextOptions = Array.isArray(employeePayload?.data) ? employeePayload.data : [];
-        setAssigneeOptions(
-          nextOptions
-            .map((employee: Partial<{ profile_id: string; full_name: string; email: string }>) => ({
-              id: employee.profile_id ?? "",
-              full_name: employee.full_name ?? "Unknown assignee",
-              email: employee.email ?? "",
-            }))
-            .filter((entry: AssigneeOption) => entry.id),
-        );
-      } catch (loadError) {
-        if (!active) {
-          return;
-        }
-
-        setError(loadError instanceof Error ? loadError.message : "Unable to load tasks.");
-        setTasks([]);
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
+      } catch (err) {
+        if (!active) return;
+        setError(err instanceof Error ? err.message : t.actions.error);
+      } finally { if (active) setLoading(false); }
     };
-
     void load();
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const assigneeNames = useMemo(() => Array.from(new Set(tasks.map((task) => task.assignee_name).filter(Boolean) as string[])), [tasks]);
+    return () => { active = false; };
+  }, [t.actions.error]);
 
   const filteredTasks = useMemo(() => {
     const query = search.trim().toLowerCase();
-
     return tasks.filter((task) => {
-      const matchesSearch = !query || [task.title, task.description ?? "", task.status, task.assignee_name ?? "", task.assignee_email ?? ""].filter(Boolean).join(" ").toLowerCase().includes(query);
-      const matchesStatus = statusFilter === "ALL" || task.status === statusFilter;
-      const matchesAssignee = assigneeFilter === "ALL" || task.assigned_to === assigneeFilter;
-
-      return matchesSearch && matchesStatus && matchesAssignee;
+      if (statusFilter !== "ALL" && task.status !== statusFilter) return false;
+      if (!query) return true;
+      const haystack = [task.title, task.description ?? "", task.status, task.assignee_name ?? "", task.assignee_email ?? ""]
+        .filter(Boolean).join(" ").toLowerCase();
+      return haystack.includes(query);
     });
-  }, [assigneeFilter, search, statusFilter, tasks]);
+  }, [tasks, search, statusFilter]);
 
-  const openAddModal = () => {
-    setFormState({
-      ...emptyForm,
-      assigned_to: role === "EMPLOYEE" && profile?.id ? profile.id : "",
-    });
-    setFormError(null);
-    setIsEditing(false);
-    setIsModalOpen(true);
-  };
+  const metrics = useMemo(() => ({
+    total: tasks.length,
+    todo: tasks.filter((t) => t.status === "TODO").length,
+    inProgress: tasks.filter((t) => t.status === "IN_PROGRESS").length,
+    completed: tasks.filter((t) => t.status === "COMPLETED").length,
+  }), [tasks]);
 
   const openTaskDetail = async (taskId: string) => {
     setSelectedTaskId(taskId);
     setDetailError(null);
     setDetailLoading(true);
-
     try {
-      const response = await fetch(`/api/tasks/${taskId}`, { cache: "no-store" });
-      const payload = await response.json();
-
-      if (!response.ok || !payload.success) {
-        throw new Error(payload.message ?? "Unable to load task details.");
-      }
-
+      const res = await fetch(`/api/tasks/${taskId}`, { cache: "no-store" });
+      const payload = await res.json();
+      if (!res.ok || !payload.success) throw new Error(payload.message ?? t.actions.error);
       setSelectedTask(payload.data as TaskRow);
-    } catch (detailLoadError) {
-      setDetailError(detailLoadError instanceof Error ? detailLoadError.message : "Unable to load task details.");
+    } catch (err) {
+      setDetailError(err instanceof Error ? err.message : t.actions.error);
       setSelectedTask(null);
-    } finally {
-      setDetailLoading(false);
-    }
+    } finally { setDetailLoading(false); }
   };
 
   const closeDetail = () => {
-    setSelectedTaskId(null);
-    setSelectedTask(null);
-    setDetailError(null);
-    setIsEditing(false);
+    setSelectedTaskId(null); setSelectedTask(null); setDetailError(null);
   };
 
-  const handleCreateTask = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (!formState.title.trim()) {
-      setFormError("Title is required.");
-      return;
-    }
-
-    if (role === "EMPLOYEE" && !profile?.id) {
-      setFormError("Your profile is missing. Please sign in again.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    setFormError(null);
-
-    try {
-      const payload = {
-        title: formState.title,
-        description: formState.description || null,
-        assigned_to: formState.assigned_to || (role === "EMPLOYEE" ? profile?.id ?? null : null),
-        status: formState.status,
-        due_date: formState.due_date || null,
-        related_type: formState.related_type || null,
-        related_id: formState.related_id || null,
-      };
-
-      const response = await fetch("/api/tasks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.message ?? "Unable to create task.");
-      }
-
-      setIsModalOpen(false);
-      setFormState(emptyForm);
-      await fetchTasks();
-      setSelectedTaskId(null);
-      setSelectedTask(null);
-    } catch (submitError) {
-      setFormError(submitError instanceof Error ? submitError.message : "Unable to create task.");
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleEditSuccess = (updated: TaskEditRow) => {
+    if (selectedTask?.id === updated.id) setSelectedTask((prev) => prev ? { ...prev, ...updated } : null);
+    void fetchTasks();
   };
 
-  const handleUpdateTask = async (event: React.FormEvent<HTMLFormElement>) => {
-    if (!selectedTask) {
-      return;
-    }
-
-    event.preventDefault();
-
-    setIsSubmitting(true);
-    setDetailError(null);
-
-    try {
-      const response = await fetch(`/api/tasks/${selectedTask.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: selectedTask.title,
-          description: selectedTask.description,
-          assigned_to: selectedTask.assigned_to,
-          status: selectedTask.status,
-          due_date: selectedTask.due_date,
-          related_type: selectedTask.related_type,
-          related_id: selectedTask.related_id,
-        }),
-      });
-
-      const payload = await response.json();
-
-      if (!response.ok || !payload.success) {
-        throw new Error(payload.message ?? "Unable to update task.");
-      }
-
-      setIsEditing(false);
-      await openTaskDetail(selectedTask.id);
-      await fetchTasks();
-    } catch (updateError) {
-      setDetailError(updateError instanceof Error ? updateError.message : "Unable to update task.");
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleDeleteSuccess = (deletedId: string) => {
+    if (selectedTaskId === deletedId) closeDetail();
+    void fetchTasks();
   };
 
-  const handleDeleteTask = async () => {
-    if (!selectedTask || !canManageTasks) {
-      return;
-    }
+  const clearFilters = () => { setSearch(""); setStatusFilter("ALL"); };
 
-    const confirmed = window.confirm(`Delete task ${selectedTask.title}?`);
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/tasks/${selectedTask.id}`, { method: "DELETE" });
-      const payload = await response.json();
-
-      if (!response.ok || !payload.success) {
-        throw new Error(payload.message ?? "Unable to delete task.");
-      }
-
-      closeDetail();
-      await fetchTasks();
-    } catch (deleteError) {
-      setDetailError(deleteError instanceof Error ? deleteError.message : "Unable to delete task.");
-    }
-  };
+  const toEditRow = (task: TaskRow): TaskEditRow => ({
+    id: task.id, title: task.title, description: task.description,
+    status: task.status, assigned_to: task.assigned_to, due_date: task.due_date,
+    related_type: task.related_type, related_id: task.related_id,
+    assignee_name: task.assignee_name,
+  });
 
   return (
-    <div className="protected-page-content workflows-page">
+    <div className="protected-page-content workflows-page" ref={directoryRef}>
+      {/* Header */}
       <div className="protected-page-heading">
         <div>
           <p className="eyebrow">Operations</p>
-          <h1>Workflows</h1>
-          <p className="muted">Track active tasks, assignments, and follow-ups across the workforce.</p>
+          <h1>{t.pages.workflowsTitle}</h1>
+          <p className="muted">{t.pages.workflowsSubtitle}</p>
         </div>
-        <button type="button" className="primary-button" onClick={openAddModal}>
-          <Plus size={15} /> New task
+        <button type="button" className="primary-button" onClick={() => setIsCreateModalOpen(true)}>
+          <Plus size={15} /> + Create Task
         </button>
       </div>
 
+      {/* Metrics */}
+      {!loading && !error && (
+        <div className="metric-grid" style={{ gridTemplateColumns: "repeat(4, 1fr)", marginBottom: 20 }}>
+          <div className="metric-card">
+            <div className="metric-icon blue"><CalendarDays size={16} /></div>
+            <span className="metric-label">Total Tasks</span>
+            <strong>{metrics.total}</strong>
+          </div>
+          <div className="metric-card">
+            <div className="metric-icon yellow"><CircleDashed size={16} /></div>
+            <span className="metric-label">{t.statuses.todo}</span>
+            <strong>{metrics.todo}</strong>
+          </div>
+          <div className="metric-card">
+            <div className="metric-icon teal"><Timer size={16} /></div>
+            <span className="metric-label">{t.statuses.inProgress}</span>
+            <strong>{metrics.inProgress}</strong>
+          </div>
+          <div className="metric-card">
+            <div className="metric-icon coral"><CheckCircle2 size={16} /></div>
+            <span className="metric-label">{t.statuses.completed}</span>
+            <strong>{metrics.completed}</strong>
+          </div>
+        </div>
+      )}
+
+      {/* Toolbar */}
       <div className="employees-toolbar">
         <div className="employees-count">
           <span>{filteredTasks.length}</span>
           <small>tasks</small>
         </div>
-
-        <div className="employees-search" style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
-          <label aria-label="Search workflows" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flex: 1, justifyContent: "flex-end", flexWrap: "wrap" }}>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            style={{ background: "var(--input-bg)", border: "1px solid var(--input-border)", borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "var(--ink)", outline: "none" }}
+            aria-label="Filter by status"
+          >
+            <option value="ALL">All Statuses</option>
+            {(Object.keys(STATUS_LABELS) as TaskStatus[]).map((v) => (
+              <option key={v} value={v}>{STATUS_LABELS[v]}</option>
+            ))}
+          </select>
+          <label className="employees-search" style={{ maxWidth: 300 }} aria-label="Search tasks">
             <Search size={15} />
-            <input
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search workflows"
-            />
+            <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search tasks, assignee..." />
           </label>
-          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as "ALL" | TaskStatus)}>
-            <option value="ALL">All statuses</option>
-            {taskStatusOptions.map((status) => (
-              <option key={status} value={status}>{status}</option>
-            ))}
-          </select>
-          <select value={assigneeFilter} onChange={(event) => setAssigneeFilter(event.target.value)}>
-            <option value="ALL">All assignees</option>
-            {assigneeNames.map((name) => (
-              <option key={name} value={tasks.find((task) => task.assignee_name === name)?.assigned_to ?? ""}>{name}</option>
-            ))}
-          </select>
         </div>
       </div>
 
-      {error ? <div className="panel panel-warning"><p>{error}</p></div> : null}
-
-      {loading ? (
-        <div className="panel empty-panel">
-          <Loader2 className="loading-spinner" size={18} />
-          <span>Loading workflows...</span>
+      {/* States */}
+      {error ? (
+        <div className="panel empty-state">
+          <CalendarDays size={24} />
+          <p style={{ fontWeight: 600, color: "var(--ink)" }}>Unable to load workflows</p>
+          <p style={{ margin: "4px 0 16px" }}>{error}</p>
+          <button type="button" className="secondary-button" onClick={() => void fetchTasks()}>{t.actions.refresh}</button>
+        </div>
+      ) : loading ? (
+        <div className="panel empty-state">
+          <Loader2 className="loading-spinner" size={24} />
+          <span>{t.actions.loading}</span>
+        </div>
+      ) : tasks.length === 0 ? (
+        <div className="panel empty-state">
+          <CalendarDays size={28} />
+          <p style={{ fontWeight: 600, fontSize: 16, color: "var(--ink)" }}>No tasks yet</p>
+          <p style={{ margin: "4px 0 16px" }}>Create a task to start managing workforce work.</p>
+          <button type="button" className="primary-button" onClick={() => setIsCreateModalOpen(true)}>
+            <Plus size={15} /> + Create Task
+          </button>
         </div>
       ) : filteredTasks.length === 0 ? (
-        <div className="panel empty-panel">
-          <CircleDashed size={18} />
-          <span>No workflows match your filters.</span>
+        <div className="panel empty-state">
+          <Search size={24} />
+          <p style={{ fontWeight: 600, fontSize: 15, color: "var(--ink)" }}>No tasks match your filters.</p>
+          <p style={{ margin: "4px 0 16px" }}>Try adjusting your search or status filter.</p>
+          <button type="button" className="secondary-button" onClick={clearFilters}>Clear filters</button>
         </div>
       ) : (
         <div className="employees-layout">
-          <div className="panel table-panel">
+          {/* Task Table */}
+          <div className="panel table-panel workflows-table">
             <div className="table-header">
               <span>Task</span>
               <span>Assignee</span>
               <span>Status</span>
-              <span>Due</span>
+              <span>Due Date</span>
+              <span style={{ textAlign: "right" }}>Actions</span>
             </div>
             <div className="table-body">
-              {filteredTasks.map((task) => (
-                <button
-                  type="button"
-                  className={`employee-row ${selectedTaskId === task.id ? "active" : ""}`}
-                  key={task.id}
-                  onClick={() => void openTaskDetail(task.id)}
-                >
-                  <span className="employee-name-block">
-                    <strong>{task.title}</strong>
-                    <small>{formatDate(task.created_at)}</small>
-                  </span>
-                  <span>{task.assignee_name ?? "Unassigned"}</span>
-                  <span>
-                    <span className={`status-pill ${task.status === "TODO" ? "neutral" : task.status === "IN_PROGRESS" ? "active" : "inactive"}`}>
-                      {task.status}
-                    </span>
-                  </span>
-                  <span>{formatDate(task.due_date)}</span>
-                </button>
-              ))}
+              {filteredTasks.map((task) => {
+                const isSelected = selectedTaskId === task.id;
+                const dueDateStatus = getDueDateStatus(task.due_date);
+                return (
+                  <div
+                    tabIndex={0}
+                    role="button"
+                    className={`table-row ${isSelected ? "selected" : ""}`}
+                    key={task.id}
+                    onClick={() => void openTaskDetail(task.id)}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") void openTaskDetail(task.id); }}
+                  >
+                    <div className="cell-person">
+                      <div className={`avatar task-status-avatar ${getStatusClass(task.status)}`}>{getInitials(task.title)}</div>
+                      <div>
+                        <strong style={{ display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%" }}>{task.title}</strong>
+                        <span>{formatDate(task.created_at)}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <strong>{task.assignee_name ?? "Unassigned"}</strong>
+                      {task.assignee_email && <span>{task.assignee_email}</span>}
+                    </div>
+                    <div>
+                      <span className={`status-chip ${getStatusClass(task.status)}`}>{STATUS_LABELS[task.status]}</span>
+                    </div>
+                    <div>
+                      {task.due_date ? (
+                        <span className={`due-date-label ${dueDateStatus ?? ""}`}>
+                          {dueDateStatus === "overdue" && <CalendarClock size={13} style={{ display: "inline", marginRight: 4 }} />}
+                          {formatDate(task.due_date)}
+                        </span>
+                      ) : "—"}
+                    </div>
+                    <div className="cell-actions" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        className="action-menu-trigger"
+                        onClick={() => setActiveMenuId(activeMenuId === task.id ? null : task.id)}
+                        aria-label={`Actions for ${task.title}`}
+                        aria-expanded={activeMenuId === task.id}
+                      >
+                        <MoreHorizontal size={18} />
+                      </button>
+                      {activeMenuId === task.id && (
+                        <div className="action-dropdown-menu" role="menu">
+                          <button type="button" className="action-dropdown-item" onClick={() => { setActiveMenuId(null); void openTaskDetail(task.id); }}>
+                            <Eye size={14} /> {t.actions.viewDetails}
+                          </button>
+                          <button type="button" className="action-dropdown-item" onClick={() => { setActiveMenuId(null); setEditingTask(toEditRow(task)); }}>
+                            <Pencil size={14} /> {t.actions.edit}
+                          </button>
+                          <button type="button" className="action-dropdown-item danger" onClick={() => { setActiveMenuId(null); setDeletingTask(toEditRow(task)); }}>
+                            <Trash2 size={14} /> {t.actions.delete}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
+          {/* Detail Panel */}
           <div className="panel detail-panel">
             {detailLoading ? (
-              <div className="detail-loading">
-                <Loader2 className="loading-spinner" size={18} />
-                <span>Loading workflow...</span>
+              <div className="empty-state">
+                <Loader2 className="loading-spinner" size={20} />
+                <span>{t.actions.loading}</span>
               </div>
             ) : selectedTask ? (
               <>
                 <div className="detail-header">
-                  <div>
-                    <p className="eyebrow">Task detail</p>
-                    <h2>{selectedTask.title}</h2>
-                  </div>
-                  {canManageTasks ? (
-                    <div className="detail-actions">
-                      <button type="button" className="secondary-button" onClick={() => setIsEditing((open) => !open)}>
-                        <Pencil size={14} /> {isEditing ? "Close" : "Edit"}
-                      </button>
-                      <button type="button" className="danger-button" onClick={handleDeleteTask}>
-                        <Trash2 size={14} /> Delete
-                      </button>
+                  <div className="detail-person">
+                    <div className={`avatar task-status-avatar ${getStatusClass(selectedTask.status)}`} style={{ width: 44, height: 44, fontSize: 14 }}>
+                      {getInitials(selectedTask.title)}
                     </div>
-                  ) : null}
+                    <div>
+                      <h2 style={{ fontSize: 17, margin: 0, wordBreak: "break-word" }}>{selectedTask.title}</h2>
+                      <p>{selectedTask.assignee_name ? `Assigned to ${selectedTask.assignee_name}` : "Unassigned"}</p>
+                    </div>
+                  </div>
                 </div>
-
-                {detailError ? <div className="panel-warning detail-warning"><p>{detailError}</p></div> : null}
-
-                {isEditing ? (
-                  <form className="employee-form" onSubmit={handleUpdateTask}>
-                    <div className="field-row">
-                      <label>
-                        Title
-                        <input value={selectedTask.title} onChange={(event) => setSelectedTask({ ...selectedTask, title: event.target.value })} />
-                      </label>
+                <div className="detail-body">
+                  {detailError && <div className="auth-error" style={{ marginBottom: 16 }}>{detailError}</div>}
+                  <div className="info-grid">
+                    <div className="info-item">
+                      <label>Status</label>
+                      <span><span className={`status-chip ${getStatusClass(selectedTask.status)}`}>{STATUS_LABELS[selectedTask.status]}</span></span>
                     </div>
-
-                    <div className="field-row">
-                      <label>
-                        Status
-                        <select value={selectedTask.status} onChange={(event) => setSelectedTask({ ...selectedTask, status: event.target.value as TaskStatus })}>
-                          {taskStatusOptions.map((status) => (
-                            <option key={status} value={status}>{status}</option>
-                          ))}
-                        </select>
-                      </label>
-                      <label>
-                        Due date
-                        <input type="date" value={selectedTask.due_date ?? ""} onChange={(event) => setSelectedTask({ ...selectedTask, due_date: event.target.value || null })} />
-                      </label>
+                    <div className="info-item">
+                      <label>Due Date</label>
+                      <span>
+                        {selectedTask.due_date ? (
+                          <span className={`due-date-label ${getDueDateStatus(selectedTask.due_date) ?? ""}`}>{formatDate(selectedTask.due_date)}</span>
+                        ) : "—"}
+                      </span>
                     </div>
-
-                    <div className="field-row">
-                      <label>
-                        Assignee
-                        <select value={selectedTask.assigned_to ?? ""} onChange={(event) => setSelectedTask({ ...selectedTask, assigned_to: event.target.value || null })}>
-                          <option value="">Unassigned</option>
-                          {assigneeOptions.map((assignee) => (
-                            <option key={assignee.id} value={assignee.id}>{assignee.full_name}</option>
-                          ))}
-                        </select>
-                      </label>
+                    <div className="info-item">
+                      <label>Assignee</label>
+                      <span>{selectedTask.assignee_name ?? "Unassigned"}</span>
                     </div>
-
-                    <div className="field-row">
-                      <label>
-                        Description
-                        <textarea value={selectedTask.description ?? ""} onChange={(event) => setSelectedTask({ ...selectedTask, description: event.target.value || null })} rows={4} />
-                      </label>
+                    <div className="info-item">
+                      <label>Assignee Email</label>
+                      <span>{selectedTask.assignee_email ?? "—"}</span>
                     </div>
-
-                    <div className="detail-footer">
-                      <button type="button" className="secondary-button" onClick={() => setIsEditing(false)}>
-                        Cancel
-                      </button>
-                      <button type="submit" className="primary-button" disabled={isSubmitting}>
-                        {isSubmitting ? "Saving..." : "Save changes"}
-                      </button>
+                    <div className="info-item">
+                      <label>Created</label>
+                      <span>{formatDate(selectedTask.created_at)}</span>
                     </div>
-                  </form>
-                ) : (
-                  <div className="employee-detail-grid">
-                    <div className="detail-stat">
-                      <span className="detail-label">Assignee</span>
-                      <strong>{selectedTask.assignee_name ?? "Unassigned"}</strong>
+                    <div className="info-item">
+                      <label>Related Context</label>
+                      <span>{selectedTask.related_type ?? "—"}</span>
                     </div>
-                    <div className="detail-stat">
-                      <span className="detail-label">Email</span>
-                      <strong>{selectedTask.assignee_email ?? "—"}</strong>
-                    </div>
-                    <div className="detail-stat">
-                      <span className="detail-label">Status</span>
-                      <strong>{selectedTask.status}</strong>
-                    </div>
-                    <div className="detail-stat">
-                      <span className="detail-label">Due date</span>
-                      <strong>{formatDate(selectedTask.due_date)}</strong>
-                    </div>
-                    <div className="detail-stat">
-                      <span className="detail-label">Created</span>
-                      <strong>{formatDate(selectedTask.created_at)}</strong>
-                    </div>
-                    <div className="detail-stat">
-                      <span className="detail-label">Related type</span>
-                      <strong>{selectedTask.related_type ?? "—"}</strong>
-                    </div>
-                    <div className="detail-stat">
-                      <span className="detail-label">Related ID</span>
-                      <strong>{selectedTask.related_id ?? "—"}</strong>
-                    </div>
-                    <div className="detail-stat detail-stat-wide">
-                      <span className="detail-label">Description</span>
-                      <strong>{selectedTask.description ?? "No description provided."}</strong>
+                    <div className="info-item" style={{ gridColumn: "1 / -1" }}>
+                      <label>Description</label>
+                      <span>{selectedTask.description || "No description provided."}</span>
                     </div>
                   </div>
-                )}
+                  <div className="detail-actions" style={{ marginTop: 20, display: "flex", gap: 10 }}>
+                    <button type="button" className="secondary-button" onClick={() => setEditingTask(toEditRow(selectedTask))}>
+                      <Pencil size={14} /> {t.actions.edit}
+                    </button>
+                    <button type="button" className="danger-button" onClick={() => setDeletingTask(toEditRow(selectedTask))}>
+                      <Trash2 size={14} /> {t.actions.delete}
+                    </button>
+                  </div>
+                </div>
               </>
             ) : (
-              <div className="panel empty-panel">
-                <UserRound size={18} />
-                <span>Select a workflow to view details.</span>
+              <div className="empty-state">
+                <CalendarDays size={24} />
+                <p>Select a task to view its details.</p>
               </div>
             )}
           </div>
         </div>
       )}
 
-      {isModalOpen ? (
-        <div className="modal-overlay" role="dialog" aria-modal="true">
-          <div className="modal-card">
-            <div className="modal-header">
-              <div>
-                <p className="eyebrow">Create task</p>
-                <h3>New workflow task</h3>
-              </div>
-              <button type="button" className="icon-button" onClick={() => setIsModalOpen(false)}>✕</button>
-            </div>
-
-            <form className="employee-form" onSubmit={handleCreateTask}>
-              <div className="field-row">
-                <label>
-                  Title
-                  <input value={formState.title} onChange={(event) => setFormState({ ...formState, title: event.target.value })} />
-                </label>
-              </div>
-
-              <div className="field-row">
-                <label>
-                  Status
-                  <select value={formState.status} onChange={(event) => setFormState({ ...formState, status: event.target.value as TaskStatus })}>
-                    {taskStatusOptions.map((status) => (
-                      <option key={status} value={status}>{status}</option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Due date
-                  <input type="date" value={formState.due_date} onChange={(event) => setFormState({ ...formState, due_date: event.target.value })} />
-                </label>
-              </div>
-
-              <div className="field-row">
-                <label>
-                  Assignee
-                  <select value={formState.assigned_to} onChange={(event) => setFormState({ ...formState, assigned_to: event.target.value })}>
-                    <option value="">Unassigned</option>
-                    {assigneeOptions.map((assignee) => (
-                      <option key={assignee.id} value={assignee.id}>{assignee.full_name}</option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
-              <div className="field-row">
-                <label>
-                  Related type
-                  <input value={formState.related_type} onChange={(event) => setFormState({ ...formState, related_type: event.target.value })} placeholder="request, candidate, interview" />
-                </label>
-                <label>
-                  Related ID
-                  <input value={formState.related_id} onChange={(event) => setFormState({ ...formState, related_id: event.target.value })} placeholder="UUID" />
-                </label>
-              </div>
-
-              <div className="field-row">
-                <label>
-                  Description
-                  <textarea value={formState.description} onChange={(event) => setFormState({ ...formState, description: event.target.value })} rows={4} />
-                </label>
-              </div>
-
-              {formError ? <div className="panel-warning detail-warning"><p>{formError}</p></div> : null}
-
-              <div className="detail-footer">
-                <button type="button" className="secondary-button" onClick={() => setIsModalOpen(false)}>
-                  Cancel
-                </button>
-                <button type="submit" className="primary-button" disabled={isSubmitting}>
-                  {isSubmitting ? "Creating..." : "Create task"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      ) : null}
+      {/* Modals */}
+      <CreateTaskModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={() => void fetchTasks()}
+      />
+      <EditTaskModal
+        key={editingTask?.id ?? "edit-task-modal"}
+        isOpen={!!editingTask}
+        task={editingTask}
+        onClose={() => setEditingTask(null)}
+        onSuccess={handleEditSuccess}
+      />
+      <DeleteTaskModal
+        key={deletingTask?.id ?? "delete-task-modal"}
+        isOpen={!!deletingTask}
+        task={deletingTask}
+        onClose={() => setDeletingTask(null)}
+        onSuccess={handleDeleteSuccess}
+      />
     </div>
   );
 }

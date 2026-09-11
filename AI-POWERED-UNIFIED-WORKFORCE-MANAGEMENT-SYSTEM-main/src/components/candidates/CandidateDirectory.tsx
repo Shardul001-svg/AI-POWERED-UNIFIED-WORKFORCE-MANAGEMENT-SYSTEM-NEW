@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { ArrowUpRight, BriefcaseBusiness, Loader2, Pencil, Plus, Search, Trash2, UserRound } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { BriefcaseBusiness, Eye, Loader2, MoreHorizontal, Pencil, Plus, Search, Trash2, UserRound } from "lucide-react";
 
 import { useAuth } from "@/lib/auth/AuthProvider";
-
-type CandidateStatus = "APPLIED" | "SCREENING" | "INTERVIEW" | "SELECTED" | "REJECTED";
+import { useI18n } from "@/lib/i18n/I18nProvider";
+import { AddCandidateModal } from "./AddCandidateModal";
+import { CandidateEditRow, EditCandidateModal } from "./EditCandidateModal";
+import { DeleteCandidateConfirmationModal } from "./DeleteCandidateConfirmationModal";
 
 type CandidateRow = {
   id: string;
@@ -15,48 +16,51 @@ type CandidateRow = {
   phone: string | null;
   position_applied: string;
   experience: number;
-  status: CandidateStatus;
+  status: "APPLIED" | "SCREENING" | "INTERVIEW" | "SELECTED" | "REJECTED";
   created_at: string;
 };
 
-type CandidateFormState = {
-  full_name: string;
-  email: string;
-  phone: string;
-  position_applied: string;
-  experience: number;
-  status: CandidateStatus;
-};
-
-const candidateStatusOptions: CandidateStatus[] = ["APPLIED", "SCREENING", "INTERVIEW", "SELECTED", "REJECTED"];
-
-const emptyForm: CandidateFormState = {
-  full_name: "",
-  email: "",
-  phone: "",
-  position_applied: "",
-  experience: 0,
-  status: "APPLIED",
-};
-
 export function CandidateDirectory() {
-  const router = useRouter();
+  const { t } = useI18n();
   const { role } = useAuth();
   const canManageCandidates = role === "ADMIN" || role === "HR";
 
+  const directoryRef = useRef<HTMLDivElement>(null);
   const [candidates, setCandidates] = useState<CandidateRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
   const [selectedCandidate, setSelectedCandidate] = useState<CandidateRow | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
-  const [formState, setFormState] = useState<CandidateFormState>(emptyForm);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
+
+  // Menus and modals
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [editingCandidate, setEditingCandidate] = useState<CandidateRow | null>(null);
+  const [deletingCandidate, setDeletingCandidate] = useState<CandidateRow | null>(null);
+
+  // Close action menu on outside click or Escape
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (directoryRef.current && !directoryRef.current.contains(event.target as Node)) {
+        setActiveMenuId(null);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setActiveMenuId(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
   const fetchCandidates = async () => {
     setLoading(true);
@@ -67,13 +71,28 @@ export function CandidateDirectory() {
       const payload = await response.json();
 
       if (!response.ok || !payload.success) {
-        throw new Error(payload.message ?? "Unable to load candidates.");
+        throw new Error(payload.message ?? t.actions.error);
       }
 
-      const rows = Array.isArray(payload.data) ? payload.data : [];
+      const rows: CandidateRow[] = Array.isArray(payload.data) ? payload.data : [];
       setCandidates(rows);
+
+      if (rows.length > 0) {
+        setSelectedCandidateId((prev) => {
+          const match = rows.find((c) => c.id === prev);
+          if (match) {
+            setSelectedCandidate(match);
+            return match.id;
+          }
+          setSelectedCandidate(rows[0]);
+          return rows[0].id;
+        });
+      } else {
+        setSelectedCandidateId(null);
+        setSelectedCandidate(null);
+      }
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Unable to load candidates.");
+      setError(loadError instanceof Error ? loadError.message : t.actions.error);
       setCandidates([]);
     } finally {
       setLoading(false);
@@ -84,10 +103,7 @@ export function CandidateDirectory() {
     let active = true;
 
     const loadCandidates = async () => {
-      if (!active) {
-        return;
-      }
-
+      if (!active) return;
       setLoading(true);
       setError(null);
 
@@ -95,26 +111,32 @@ export function CandidateDirectory() {
         const response = await fetch("/api/candidates", { cache: "no-store" });
         const payload = await response.json();
 
-        if (!active) {
-          return;
-        }
+        if (!active) return;
 
         if (!response.ok || !payload.success) {
-          throw new Error(payload.message ?? "Unable to load candidates.");
+          throw new Error(payload.message ?? t.actions.error);
         }
 
-        setCandidates(Array.isArray(payload.data) ? payload.data : []);
+        const rows: CandidateRow[] = Array.isArray(payload.data) ? payload.data : [];
+        setCandidates(rows);
+
+        if (rows.length > 0) {
+          setSelectedCandidateId((prev) => {
+            const match = rows.find((c) => c.id === prev);
+            if (match) {
+              setSelectedCandidate(match);
+              return match.id;
+            }
+            setSelectedCandidate(rows[0]);
+            return rows[0].id;
+          });
+        }
       } catch (loadError) {
-        if (!active) {
-          return;
-        }
-
-        setError(loadError instanceof Error ? loadError.message : "Unable to load candidates.");
+        if (!active) return;
+        setError(loadError instanceof Error ? loadError.message : t.actions.error);
         setCandidates([]);
       } finally {
-        if (active) {
-          setLoading(false);
-        }
+        if (active) setLoading(false);
       }
     };
 
@@ -123,7 +145,7 @@ export function CandidateDirectory() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [t.actions.error]);
 
   const filteredCandidates = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -142,13 +164,6 @@ export function CandidateDirectory() {
     });
   }, [candidates, search]);
 
-  const openAddModal = () => {
-    setFormState(emptyForm);
-    setFormError(null);
-    setIsEditing(false);
-    setIsModalOpen(true);
-  };
-
   const openCandidateDetail = async (candidateId: string) => {
     setSelectedCandidateId(candidateId);
     setDetailError(null);
@@ -159,12 +174,12 @@ export function CandidateDirectory() {
       const payload = await response.json();
 
       if (!response.ok || !payload.success) {
-        throw new Error(payload.message ?? "Unable to load candidate details.");
+        throw new Error(payload.message ?? t.actions.error);
       }
 
       setSelectedCandidate(payload.data as CandidateRow);
     } catch (detailLoadError) {
-      setDetailError(detailLoadError instanceof Error ? detailLoadError.message : "Unable to load candidate details.");
+      setDetailError(detailLoadError instanceof Error ? detailLoadError.message : t.actions.error);
       setSelectedCandidate(null);
     } finally {
       setDetailLoading(false);
@@ -175,145 +190,60 @@ export function CandidateDirectory() {
     setSelectedCandidateId(null);
     setSelectedCandidate(null);
     setDetailError(null);
-    setIsEditing(false);
   };
 
-  const handleCreateCandidate = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    const missing = [formState.full_name, formState.email, formState.position_applied, formState.experience].some((value) => {
-      if (typeof value === "number") {
-        return Number.isNaN(value) || value < 0;
-      }
-
-      return !String(value).trim();
-    });
-
-    if (missing) {
-      setFormError("Full name, email, position, and experience are required.");
-      return;
+  const handleEditSuccess = (updated: CandidateEditRow) => {
+    if (selectedCandidate && selectedCandidate.id === updated.id) {
+      setSelectedCandidate((prev) => (prev ? { ...prev, ...updated } : null));
     }
-
-    setIsSubmitting(true);
-    setFormError(null);
-
-    try {
-      const response = await fetch("/api/candidates", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          full_name: formState.full_name,
-          email: formState.email,
-          phone: formState.phone || null,
-          position_applied: formState.position_applied,
-          experience: Number(formState.experience),
-          status: formState.status,
-        }),
-      });
-
-      const payload = await response.json();
-
-      if (!response.ok || !payload.success) {
-        throw new Error(payload.message ?? "Unable to create candidate.");
-      }
-
-      setIsModalOpen(false);
-      setFormState(emptyForm);
-      await fetchCandidates();
-      setSelectedCandidateId(null);
-      setSelectedCandidate(null);
-    } catch (submitError) {
-      setFormError(submitError instanceof Error ? submitError.message : "Unable to create candidate.");
-    } finally {
-      setIsSubmitting(false);
-    }
+    void fetchCandidates();
   };
 
-  const handleUpdateCandidate = async (event: React.FormEvent<HTMLFormElement>) => {
-    if (!selectedCandidate) {
-      return;
-    }
-
-    event.preventDefault();
-
-    setIsSubmitting(true);
-    setDetailError(null);
-
-    try {
-      const response = await fetch(`/api/candidates/${selectedCandidate.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          full_name: selectedCandidate.full_name,
-          email: selectedCandidate.email,
-          phone: selectedCandidate.phone,
-          position_applied: selectedCandidate.position_applied,
-          experience: Number(selectedCandidate.experience),
-          status: selectedCandidate.status,
-        }),
-      });
-
-      const payload = await response.json();
-
-      if (!response.ok || !payload.success) {
-        throw new Error(payload.message ?? "Unable to update candidate.");
-      }
-
-      setIsEditing(false);
-      await openCandidateDetail(selectedCandidate.id);
-      await fetchCandidates();
-    } catch (updateError) {
-      setDetailError(updateError instanceof Error ? updateError.message : "Unable to update candidate.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleDeleteCandidate = async () => {
-    if (!selectedCandidate || !canManageCandidates) {
-      return;
-    }
-
-    const confirmed = window.confirm(`Delete ${selectedCandidate.full_name}?`);
-
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/candidates/${selectedCandidate.id}`, { method: "DELETE" });
-      const payload = await response.json();
-
-      if (!response.ok || !payload.success) {
-        throw new Error(payload.message ?? "Unable to delete candidate.");
-      }
-
+  const handleDeleteSuccess = (deletedId: string) => {
+    if (selectedCandidateId === deletedId) {
       closeDetail();
-      await fetchCandidates();
-    } catch (deleteError) {
-      setDetailError(deleteError instanceof Error ? deleteError.message : "Unable to delete candidate.");
+    }
+    void fetchCandidates();
+  };
+
+  const getStatusLabel = (status: CandidateRow["status"]) => {
+    switch (status) {
+      case "APPLIED":
+        return t.statuses.applied;
+      case "SCREENING":
+        return t.statuses.screening;
+      case "INTERVIEW":
+        return t.statuses.interview;
+      case "SELECTED":
+        return t.statuses.selected;
+      case "REJECTED":
+        return t.statuses.rejected;
+      default:
+        return status;
     }
   };
 
   return (
-    <div className="protected-page-content candidates-page">
+    <div className="protected-page-content candidates-page" ref={directoryRef}>
+      {/* Page Header */}
       <div className="protected-page-heading">
         <div>
           <p className="eyebrow">Recruitment</p>
-          <h1>Candidates</h1>
-          <p className="muted">Talent pipeline and hiring pipeline from first application to final decision.</p>
+          <h1>{t.pages.candidatesTitle}</h1>
+          <p className="muted">{t.pages.candidatesSubtitle}</p>
         </div>
         {canManageCandidates ? (
-          <button type="button" className="primary-button" onClick={openAddModal}>
-            <Plus size={15} /> Add Candidate
+          <button type="button" className="primary-button" onClick={() => setIsAddModalOpen(true)}>
+            <Plus size={15} /> + {t.actions.add} Candidate
           </button>
         ) : null}
       </div>
 
+      {/* Summary & Toolbar */}
       <div className="employees-toolbar">
         <div className="employees-count">
           <span>{filteredCandidates.length}</span>
-          <small>candidates</small>
+          <small>{t.nav.candidates.toLowerCase()}</small>
         </div>
 
         <label className="employees-search" aria-label="Search candidates">
@@ -322,243 +252,264 @@ export function CandidateDirectory() {
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search candidates"
+            placeholder="Search candidates by name, email, role..."
           />
         </label>
       </div>
 
+      {/* Empty / Loading / Error states */}
       {error ? (
-        <div className="panel panel-warning">
-          <p>{error}</p>
+        <div className="panel empty-state">
+          <UserRound size={24} />
+          <p>{error || "Unable to load candidates."}</p>
+          <button type="button" className="secondary-button" onClick={() => void fetchCandidates()}>
+            {t.actions.refresh}
+          </button>
         </div>
-      ) : null}
-
-      {loading ? (
-        <div className="panel empty-panel">
-          <Loader2 className="loading-spinner" size={18} />
-          <span>Loading candidates...</span>
+      ) : loading ? (
+        <div className="panel empty-state">
+          <Loader2 className="loading-spinner" size={24} />
+          <span>{t.actions.loading}</span>
+        </div>
+      ) : candidates.length === 0 ? (
+        <div className="panel empty-state">
+          <UserRound size={28} />
+          <p style={{ fontWeight: 600, fontSize: 16, color: "var(--ink)" }}>No candidates yet</p>
+          <p style={{ margin: "4px 0 16px" }}>There are no candidates registered in the recruitment pipeline yet.</p>
+          {canManageCandidates ? (
+            <button type="button" className="primary-button" onClick={() => setIsAddModalOpen(true)}>
+              <Plus size={15} /> + {t.actions.add} Candidate
+            </button>
+          ) : null}
         </div>
       ) : filteredCandidates.length === 0 ? (
-        <div className="panel empty-panel">
-          <UserRound size={18} />
-          <span>No candidates match your search.</span>
+        <div className="panel empty-state">
+          <Search size={24} />
+          <p style={{ fontWeight: 600, fontSize: 15, color: "var(--ink)" }}>No candidates match your search.</p>
+          <p style={{ margin: "4px 0 16px" }}>No candidate record matches &quot;{search}&quot;.</p>
+          <button type="button" className="secondary-button" onClick={() => setSearch("")}>
+            Clear search
+          </button>
         </div>
       ) : (
         <div className="employees-layout">
-          <div className="panel table-panel">
+          {/* Candidate Table List */}
+          <div className="panel table-panel candidates-table">
             <div className="table-header">
-              <span>Name</span>
-              <span>Position</span>
-              <span>Status</span>
+              <span>Candidate</span>
+              <span>Applied Role</span>
               <span>Experience</span>
+              <span>Status</span>
+              <span style={{ textAlign: "right" }}>{t.nav.settingsAndMore ? "Actions" : "Actions"}</span>
             </div>
             <div className="table-body">
-              {filteredCandidates.map((candidate) => (
-                <button
-                  type="button"
-                  className={`employee-row ${selectedCandidateId === candidate.id ? "active" : ""}`}
-                  key={candidate.id}
-                  onClick={() => void openCandidateDetail(candidate.id)}
-                >
-                  <span className="employee-name-block">
-                    <strong>{candidate.full_name}</strong>
-                    <small>{candidate.email}</small>
-                  </span>
-                  <span>{candidate.position_applied}</span>
-                  <span>
-                    <span className={`status-pill ${candidate.status.toLowerCase()}`}>
-                      {candidate.status}
-                    </span>
-                  </span>
-                  <span>{candidate.experience} yrs</span>
-                </button>
-              ))}
+              {filteredCandidates.map((candidate) => {
+                const initials = (candidate.full_name || candidate.email || "C")
+                  .split(" ")
+                  .map((p) => p[0])
+                  .join("")
+                  .slice(0, 2)
+                  .toUpperCase();
+
+                const isSelected = selectedCandidateId === candidate.id;
+
+                return (
+                  <div
+                    tabIndex={0}
+                    role="button"
+                    className={`table-row ${isSelected ? "selected" : ""}`}
+                    key={candidate.id}
+                    onClick={() => void openCandidateDetail(candidate.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        void openCandidateDetail(candidate.id);
+                      }
+                    }}
+                  >
+                    <div className="cell-person">
+                      <div className="avatar avatar-person">{initials}</div>
+                      <div>
+                        <strong>{candidate.full_name}</strong>
+                        <span>{candidate.email}</span>
+                      </div>
+                    </div>
+                    <span>{candidate.position_applied}</span>
+                    <span>{candidate.experience} yrs</span>
+                    <div>
+                      <span className={`status-chip ${candidate.status.toLowerCase()}`}>
+                        {getStatusLabel(candidate.status)}
+                      </span>
+                    </div>
+                    <div className="cell-actions" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        className="action-menu-trigger"
+                        onClick={() => setActiveMenuId(activeMenuId === candidate.id ? null : candidate.id)}
+                        aria-label={`Actions for ${candidate.full_name}`}
+                        aria-expanded={activeMenuId === candidate.id}
+                      >
+                        <MoreHorizontal size={18} />
+                      </button>
+
+                      {activeMenuId === candidate.id && (
+                        <div className="action-dropdown-menu" role="menu">
+                          <button
+                            type="button"
+                            className="action-dropdown-item"
+                            onClick={() => {
+                              setActiveMenuId(null);
+                              void openCandidateDetail(candidate.id);
+                            }}
+                          >
+                            <Eye size={14} /> {t.actions.viewDetails}
+                          </button>
+                          {canManageCandidates && (
+                            <>
+                              <button
+                                type="button"
+                                className="action-dropdown-item"
+                                onClick={() => {
+                                  setActiveMenuId(null);
+                                  setEditingCandidate(candidate);
+                                }}
+                              >
+                                <Pencil size={14} /> {t.actions.edit}
+                              </button>
+                              <button
+                                type="button"
+                                className="action-dropdown-item danger"
+                                onClick={() => {
+                                  setActiveMenuId(null);
+                                  setDeletingCandidate(candidate);
+                                }}
+                              >
+                                <Trash2 size={14} /> {t.actions.delete}
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
+          {/* Selected Candidate Detail Panel */}
           <div className="panel detail-panel">
             {detailLoading ? (
-              <div className="detail-loading">
-                <Loader2 className="loading-spinner" size={18} />
-                <span>Loading candidate...</span>
+              <div className="empty-state">
+                <Loader2 className="loading-spinner" size={20} />
+                <span>{t.actions.loading}</span>
               </div>
             ) : selectedCandidate ? (
               <>
                 <div className="detail-header">
-                  <div>
-                    <p className="eyebrow">Candidate profile</p>
-                    <h2>{selectedCandidate.full_name}</h2>
-                  </div>
-                  {canManageCandidates ? (
-                    <div className="detail-actions">
-                      <button type="button" className="secondary-button" onClick={() => setIsEditing((open) => !open)}>
-                        <Pencil size={14} /> {isEditing ? "Close" : "Edit"}
-                      </button>
-                      <button type="button" className="danger-button" onClick={handleDeleteCandidate}>
-                        <Trash2 size={14} /> Delete
-                      </button>
+                  <div className="detail-person">
+                    <div className="avatar avatar-person" style={{ width: 44, height: 44, fontSize: 14 }}>
+                      {(selectedCandidate.full_name || selectedCandidate.email || "C")
+                        .split(" ")
+                        .map((p) => p[0])
+                        .join("")
+                        .slice(0, 2)
+                        .toUpperCase()}
                     </div>
-                  ) : null}
+                    <div>
+                      <h2>{selectedCandidate.full_name}</h2>
+                      <p>{selectedCandidate.email}</p>
+                    </div>
+                  </div>
                 </div>
 
-                {detailError ? <div className="panel-warning detail-warning"><p>{detailError}</p></div> : null}
+                <div className="detail-body">
+                  {detailError ? <div className="auth-error" style={{ marginBottom: 16 }}>{detailError}</div> : null}
 
-                {isEditing ? (
-                  <form className="employee-form" onSubmit={handleUpdateCandidate}>
-                    <div className="field-row">
-                      <label>
-                        Full name
-                        <input value={selectedCandidate.full_name} onChange={(event) => setSelectedCandidate({ ...selectedCandidate, full_name: event.target.value })} />
-                      </label>
-                      <label>
-                        Email
-                        <input type="email" value={selectedCandidate.email} onChange={(event) => setSelectedCandidate({ ...selectedCandidate, email: event.target.value })} />
-                      </label>
+                  <div className="info-grid">
+                    <div className="info-item">
+                      <label>Position Applied</label>
+                      <span>{selectedCandidate.position_applied}</span>
                     </div>
-
-                    <div className="field-row">
-                      <label>
-                        Phone
-                        <input value={selectedCandidate.phone ?? ""} onChange={(event) => setSelectedCandidate({ ...selectedCandidate, phone: event.target.value || null })} />
-                      </label>
-                      <label>
-                        Status
-                        <select value={selectedCandidate.status} onChange={(event) => setSelectedCandidate({ ...selectedCandidate, status: event.target.value as CandidateStatus })}>
-                          {candidateStatusOptions.map((status) => (
-                            <option key={status} value={status}>{status}</option>
-                          ))}
-                        </select>
-                      </label>
+                    <div className="info-item">
+                      <label>Status</label>
+                      <span>
+                        <span className={`status-chip ${selectedCandidate.status.toLowerCase()}`}>
+                          {getStatusLabel(selectedCandidate.status)}
+                        </span>
+                      </span>
                     </div>
-
-                    <div className="field-row">
-                      <label>
-                        Position applied
-                        <input value={selectedCandidate.position_applied} onChange={(event) => setSelectedCandidate({ ...selectedCandidate, position_applied: event.target.value })} />
-                      </label>
-                      <label>
-                        Experience (years)
-                        <input type="number" min={0} value={selectedCandidate.experience} onChange={(event) => setSelectedCandidate({ ...selectedCandidate, experience: Number(event.target.value) })} />
-                      </label>
+                    <div className="info-item">
+                      <label>Experience</label>
+                      <span>{selectedCandidate.experience} years</span>
                     </div>
-
-                    <div className="detail-footer">
-                      <button type="button" className="secondary-button" onClick={() => setIsEditing(false)}>
-                        Cancel
-                      </button>
-                      <button type="submit" className="primary-button" disabled={isSubmitting}>
-                        {isSubmitting ? "Saving..." : "Save changes"}
-                      </button>
+                    <div className="info-item">
+                      <label>Phone Number</label>
+                      <span>{selectedCandidate.phone || "Not provided"}</span>
                     </div>
-                  </form>
-                ) : (
-                  <div className="employee-detail-grid">
-                    <div className="detail-stat">
-                      <span className="detail-label">Email</span>
-                      <strong>{selectedCandidate.email}</strong>
+                    <div className="info-item">
+                      <label>Email Address</label>
+                      <span>{selectedCandidate.email}</span>
                     </div>
-                    <div className="detail-stat">
-                      <span className="detail-label">Phone</span>
-                      <strong>{selectedCandidate.phone || "Not provided"}</strong>
-                    </div>
-                    <div className="detail-stat">
-                      <span className="detail-label">Position applied</span>
-                      <strong>{selectedCandidate.position_applied}</strong>
-                    </div>
-                    <div className="detail-stat">
-                      <span className="detail-label">Experience</span>
-                      <strong>{selectedCandidate.experience} years</strong>
-                    </div>
-                    <div className="detail-stat">
-                      <span className="detail-label">Status</span>
-                      <strong>{selectedCandidate.status}</strong>
-                    </div>
-                    <div className="detail-stat">
-                      <span className="detail-label">Application date</span>
-                      <strong>{new Date(selectedCandidate.created_at).toLocaleDateString()}</strong>
+                    <div className="info-item">
+                      <label>Application Date</label>
+                      <span>{new Date(selectedCandidate.created_at).toLocaleDateString()}</span>
                     </div>
                   </div>
-                )}
+
+                  {canManageCandidates && (
+                    <div className="detail-actions" style={{ marginTop: 20, display: "flex", gap: 10 }}>
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        onClick={() => setEditingCandidate(selectedCandidate)}
+                      >
+                        <Pencil size={14} /> {t.actions.edit}
+                      </button>
+                      <button
+                        type="button"
+                        className="danger-button"
+                        onClick={() => setDeletingCandidate(selectedCandidate)}
+                      >
+                        <Trash2 size={14} /> {t.actions.delete}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </>
             ) : (
-              <div className="detail-empty">
-                <BriefcaseBusiness size={18} />
-                <p>Select a candidate to view details.</p>
+              <div className="empty-state">
+                <BriefcaseBusiness size={24} />
+                <p>Select a candidate from the directory to view details.</p>
               </div>
             )}
           </div>
         </div>
       )}
 
-      {isModalOpen ? (
-        <div className="modal-backdrop" onClick={() => setIsModalOpen(false)}>
-          <div className="modal-card" onClick={(event) => event.stopPropagation()}>
-            <div className="modal-header">
-              <div>
-                <p className="eyebrow">Create candidate</p>
-                <h3>Add candidate</h3>
-              </div>
-              <button type="button" className="modal-close" onClick={() => setIsModalOpen(false)} aria-label="Close dialog">
-                ×
-              </button>
-            </div>
+      {/* Add Candidate Modal */}
+      <AddCandidateModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSuccess={() => void fetchCandidates()}
+      />
 
-            <form className="employee-form" onSubmit={handleCreateCandidate}>
-              {formError ? <div className="panel-warning"><p>{formError}</p></div> : null}
+      {/* Edit Candidate Modal */}
+      <EditCandidateModal
+        key={editingCandidate?.id ?? "edit-cand-modal"}
+        isOpen={!!editingCandidate}
+        candidate={editingCandidate}
+        onClose={() => setEditingCandidate(null)}
+        onSuccess={handleEditSuccess}
+      />
 
-              <div className="field-row">
-                <label>
-                  Full name
-                  <input value={formState.full_name} onChange={(event) => setFormState({ ...formState, full_name: event.target.value })} placeholder="Jane Doe" />
-                </label>
-                <label>
-                  Email
-                  <input type="email" value={formState.email} onChange={(event) => setFormState({ ...formState, email: event.target.value })} placeholder="jane@example.com" />
-                </label>
-              </div>
-
-              <div className="field-row">
-                <label>
-                  Phone
-                  <input value={formState.phone} onChange={(event) => setFormState({ ...formState, phone: event.target.value })} placeholder="+1 555 123 4567" />
-                </label>
-                <label>
-                  Status
-                  <select value={formState.status} onChange={(event) => setFormState({ ...formState, status: event.target.value as CandidateStatus })}>
-                    {candidateStatusOptions.map((status) => (
-                      <option key={status} value={status}>{status}</option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
-              <div className="field-row">
-                <label>
-                  Position applied
-                  <input value={formState.position_applied} onChange={(event) => setFormState({ ...formState, position_applied: event.target.value })} placeholder="Operations Manager" />
-                </label>
-                <label>
-                  Experience (years)
-                  <input type="number" min={0} value={formState.experience} onChange={(event) => setFormState({ ...formState, experience: Number(event.target.value) })} />
-                </label>
-              </div>
-
-              <div className="detail-footer modal-footer">
-                <button type="button" className="secondary-button" onClick={() => setIsModalOpen(false)}>
-                  Cancel
-                </button>
-                <button type="submit" className="primary-button" disabled={isSubmitting}>
-                  {isSubmitting ? "Saving..." : "Create candidate"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      ) : null}
-
-      <button type="button" className="back-to-dashboard" onClick={() => router.push("/dashboard")}>
-        <ArrowUpRight size={14} /> Back to dashboard
-      </button>
+      {/* Delete Candidate Confirmation Modal */}
+      <DeleteCandidateConfirmationModal
+        key={deletingCandidate?.id ?? "delete-cand-modal"}
+        isOpen={!!deletingCandidate}
+        candidate={deletingCandidate}
+        onClose={() => setDeletingCandidate(null)}
+        onSuccess={handleDeleteSuccess}
+      />
     </div>
   );
 }

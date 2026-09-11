@@ -66,7 +66,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   const updates: Record<string, string | number | null> = {};
 
   if (body.full_name !== undefined) updates.full_name = String(body.full_name).trim();
-  if (body.email !== undefined) updates.email = String(body.email).trim();
+  if (body.email !== undefined) updates.email = String(body.email).trim().toLowerCase();
   if (body.phone !== undefined) updates.phone = body.phone ? String(body.phone).trim() : null;
   if (body.position_applied !== undefined) updates.position_applied = String(body.position_applied).trim();
   if (body.experience !== undefined) updates.experience = Number(body.experience);
@@ -79,7 +79,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   const { data, error } = await auth.supabase.from("candidates").update(updates).eq("id", id).select().single();
 
   if (error) {
-    return apiError("Failed to update candidate record", 500);
+    if (error.code === "23505" || error.message?.includes("unique") || error.message?.includes("email")) {
+      return apiError(`A candidate with email '${updates.email || existing.email}' already exists.`, 400);
+    }
+    return apiError(error.message || "Failed to update candidate record", 500);
   }
 
   await createActivity(auth.profile.id, "candidate_updated", `Candidate ${id} was updated.`);

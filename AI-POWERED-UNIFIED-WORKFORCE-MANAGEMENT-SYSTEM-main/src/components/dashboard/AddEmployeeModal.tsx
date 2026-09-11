@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n/I18nProvider";
 
 type Props = {
@@ -22,6 +22,18 @@ export function AddEmployeeModal({ isOpen, onClose, onSuccess }: Readonly<Props>
   const [joiningDate, setJoiningDate] = useState(new Date().toISOString().split("T")[0]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener("keydown", handleKeyDown);
+    }
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -55,7 +67,7 @@ export function AddEmployeeModal({ isOpen, onClose, onSuccess }: Readonly<Props>
       const payload = await res.json();
 
       if (!res.ok || !payload.success) {
-        throw new Error(payload.error || "Failed to create employee");
+        throw new Error(payload.message || payload.error || "Failed to create employee");
       }
 
       onSuccess();
@@ -66,6 +78,8 @@ export function AddEmployeeModal({ isOpen, onClose, onSuccess }: Readonly<Props>
       setSubmitting(false);
     }
   };
+
+
 
   return (
     <div className="modal-overlay" onClick={onClose}>
