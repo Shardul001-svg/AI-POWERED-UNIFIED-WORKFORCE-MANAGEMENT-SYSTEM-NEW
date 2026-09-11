@@ -205,46 +205,6 @@ export const workforceTrainingData = {
       question: "How do I check my payslip?",
       answer: "Login to the employee portal (portal.secureguardproperties.com) with your credentials. Payslips are available under 'Payroll' section by the 5th of every month.",
     },
-    {
-      question: "What is the dress code?",
-      answer: "Company uniform must be worn at all times during shift. Keep it clean and professional. Safety shoes are mandatory. Grooming standards: clean-shaven or trimmed beard, neat hair.",
-    },
-    {
-      question: "Can I use my phone during work?",
-      answer: "Personal phone use is not allowed during duty hours. You can use it during your 30-minute break. For emergencies, ask supervisor permission.",
-    },
-    {
-      question: "How do I report an incident?",
-      answer: "Report all incidents via WhatsApp to your manager within 1 hour. Also send an email to operations@secureguardproperties.com with details: time, location, what happened, actions taken.",
-    },
-    {
-      question: "What documents do I need on my first day?",
-      answer: "Bring: Aadhar Card, PAN Card, 10th/12th Mark Sheet, Previous Experience Letters (if any), 2 Passport Photos, Bank Account Details, Medical Fitness Certificate.",
-    },
-    {
-      question: "Is there a probation period?",
-      answer: "Yes, 3 months probation. Your performance is reviewed at the end. Upon confirmation, you get a confirmation letter and become a permanent employee.",
-    },
-    {
-      question: "What is the notice period?",
-      answer: "30 days notice is required for resignation. If you can't serve notice, you need to pay 1 month salary in lieu. Resignation email goes to HR and your manager.",
-    },
-    {
-      question: "Do you provide training?",
-      answer: "Yes! Free 7-day security training + 15-day on-job training. Ongoing training: Fire Safety, First Aid, Customer Service. All certifications are free.",
-    },
-    {
-      question: "How do I apply for a promotion?",
-      answer: "Promotions are based on quarterly performance reviews. Minimum 1 year in current role required. Express interest to your manager during review. Openings are posted on portal.",
-    },
-    {
-      question: "What if I need emergency leave?",
-      answer: "Call your manager immediately. Emergency leave up to 3 days is allowed (unpaid). Submit formal request on portal when possible. Medical emergency needs doctor's certificate.",
-    },
-    {
-      question: "Who is my manager?",
-      answer: "Your manager's name and contact are in your offer letter. For most security staff, it's the Operations Manager. Contact: operations@secureguardproperties.com or +91 98765 43211.",
-    },
   ],
 };
 
@@ -363,5 +323,134 @@ ${workforceTrainingData.qaExamples.map((ex, i) => `
 Q${i + 1}: ${ex.question}
 A${i + 1}: ${ex.answer}
 `).join("\n")}
+
+=== ORGANIZATIONAL AUTOMATION CAPABILITIES ===
+
+RECRUITING & HIRING AUTOMATION:
+- Job posting automation across multiple platforms
+- Resume screening and candidate ranking
+- Interview scheduling and coordination
+- Candidate communication and follow-ups
+- Background check coordination
+- Offer letter generation
+- Onboarding workflow automation
+- Applicant tracking system (ATS) integration
+
+SALES AUTOMATION:
+- Lead scoring and qualification
+- CRM data entry and updates
+- Email sequence automation
+- Follow-up reminders and scheduling
+- Proposal generation
+- Contract preparation
+- Sales pipeline management
+- Meeting scheduling and coordination
+
+MARKETING AUTOMATION:
+- Social media scheduling and posting
+- Email campaign management
+- Content calendar planning
+- Analytics and reporting
+- Ad campaign optimization
+- Landing page creation
+- A/B testing coordination
+- Marketing funnel optimization
+
+LEAD GENERATION:
+- Lead scraping and enrichment
+- Contact verification
+- Lead segmentation
+- Personalized outreach
+- Lead nurturing sequences
+- Demo booking automation
+- Qualification questionnaires
+- Lead handoff to sales
+
+=== MAJOR CHALLENGES WE SOLVE ===
+
+PROBLEM 1: MANUAL DATA ENTRY
+- Old way: Sales reps spend 3 hours/day entering data in CRM
+- Our solution: Automatic CRM updates from emails, calls, meetings
+- Result: 15 hours/week saved per rep
+
+PROBLEM 2: SLOW LEAD RESPONSE
+- Old way: Leads wait 24-48 hours for first contact
+- Our solution: Instant AI-powered response in <5 minutes
+- Result: 7x higher conversion rate
+
+PROBLEM 3: INEFFICIENT RECRUITING
+- Old way: 2-3 weeks to fill a position
+- Our solution: Automated screening + scheduling fills in 5 days
+- Result: 60% faster hiring, 45% cost reduction
+
+PROBLEM 4: GENERIC OUTREACH
+- Old way: Copy-paste templates, 2% response rate
+- Our solution: AI-personalized messages, 15% response rate
+- Result: 7.5x more responses
+
+PROBLEM 5: MISSED FOLLOW-UPS
+- Old way: 40% of leads fall through cracks
+- Our solution: Automated follow-up sequences
+- Result: 95% follow-up rate, 30% more deals closed
+
+=== SAMPLE CONVERSATIONS ===
+
+Q: How can you automate recruiting?
+A: I can automate your entire recruiting workflow:
+• Post jobs to 10+ platforms automatically
+• Screen resumes and rank candidates
+• Schedule interviews based on availability
+• Send personalized candidate communications
+• Coordinate background checks
+• Generate offer letters
+• Manage onboarding checklists
+Result: 60% faster hiring, 45% cost reduction.
+
+Q: Can you help with lead generation?
+A: Absolutely! I automate lead gen end-to-end:
+• Scrape and enrich leads from LinkedIn, websites
+• Verify contact information
+• Score and segment leads
+• Send personalized outreach sequences
+• Book meetings automatically
+• Qualify and route to sales reps
+• Track engagement and optimize
+Result: 10x more leads, 65% lower cost per lead.
+
+Q: What sales tasks can you automate?
+A: I handle repetitive sales tasks so you can sell:
+• CRM data entry (automatic from emails/calls)
+• Lead scoring and prioritization
+• Email sequence creation and sending
+• Follow-up reminders
+• Meeting scheduling
+• Proposal generation
+• Contract preparation
+• Pipeline updates
+Result: 15 hours/week saved, 25% more deals closed.
+
+Q: What's the ROI?
+A: Typical customer results in 90 days:
+• Recruiting: 60% faster hiring, $15K saved per hire
+• Sales: 25% more deals, 15 hours/week saved per rep
+• Marketing: 3x content output, 50% better lead quality
+• Lead Gen: 10x more leads, 65% lower cost
+• Overall: 5-10x ROI within first quarter
+
+=== RESPONSE STYLE ===
+
+- Be professional but friendly
+- Use bullet points for clarity
+- Include specific numbers and metrics
+- Focus on outcomes, not features
+- Address objections proactively
+- Keep responses concise (3-5 sentences max)
+- Use emojis sparingly (1-2 per message)
+- If you don't know something, say "Let me connect you with our team"
+- For workforce questions, use SecureGuard policies above
+- For automation questions, use organizational capabilities above
 `;
 }
+
+// Export training data as a simple string for AI agent
+export const trainingData = getTrainingText();

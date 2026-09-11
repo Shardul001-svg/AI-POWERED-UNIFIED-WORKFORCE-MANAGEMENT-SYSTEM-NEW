@@ -1,45 +1,66 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateText } from "ai";
+import { generateText, isStepCount, tool } from "ai";
 import { google } from "@ai-sdk/google";
-import { getTrainingText } from "@/lib/workforce-training-data";
+import { Resend } from "resend";
+import { z } from "zod";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(request: NextRequest) {
   try {
     const { message, context } = await request.json();
 
-    if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-      return NextResponse.json(
-        { error: "GOOGLE_GENERATIVE_AI_API_KEY is missing from environment variables (.env.local)" },
-        { status: 500 }
-      );
+    if (!message) {
+      return NextResponse.json({ error: "Message is required" }, { status: 400 });
     }
-
-    const systemPrompt = `You are an AI assistant for workforce management at SecureGuard Property Services.
-
-${getTrainingText()}
-
-Current worker context:
-${JSON.stringify(context, null, 2)}
-
-Rules:
-- Be professional and helpful
-- If you don't know, say "Let me connect you with HR"
-- Don't make up information
-- Keep responses concise (2-3 sentences)
-
-Worker question: ${message}`;
 
     const { text } = await generateText({
       model: google("gemini-3.6-flash"),
-      prompt: systemPrompt,
+      prompt: `You are APEX, an AI assistant for SecureGuard Property Services.
+Worker Context: ${JSON.stringify(context || {})}
+
+User Message: ${message}`,
+      tools: {
+        sendEmail: tool({
+          description: "Send an actual email to a specified recipient using Resend.",
+          inputSchema: z.object({
+            to: z.email().describe("Recipient's email address"),
+            subject: z.string().describe("Subject line of the email"),
+            body: z.string().describe("Main body content of the email"),
+          }),
+          execute: async ({ to, subject, body }: { to: string; subject: string; body: string }) => {
+            try {
+              const data = await resend.emails.send({
+                from: "onboarding@resend.dev",
+                to: [to],
+                subject,
+                html: `<p>${body.replace(/\n/g, "<br>")}</p>`,
+              });
+
+              return {
+                success: true,
+                messageId: data.data?.id,
+                details: `Email delivered to ${to}`,
+              };
+            } catch (err: unknown) {
+              console.error("Resend API Error:", err);
+              const message = err instanceof Error ? err.message : "Failed to send email";
+              return {
+                success: false,
+                error: message,
+              };
+            }
+          },
+        }),
+      },
+      stopWhen: isStepCount(5),
     });
 
     return NextResponse.json({ response: text });
-  } catch (error: unknown) {
+  } catch (error: any) {
     console.error("AI Agent Catch Error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Failed to process request";
     return NextResponse.json(
-      { error: errorMessage },
+      { error: error?.message || "Failed to process request" },
       { status: 500 }
     );
   }
